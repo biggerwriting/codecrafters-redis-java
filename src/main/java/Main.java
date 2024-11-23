@@ -23,7 +23,7 @@ public class Main {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                if(line.contains("ping")) {
+                if(line.toLowerCase().contains("ping")) {
                     System.out.println("server received a new line:" + line);
                     outputStream.write("+PONG\r\n".getBytes());
                 }
