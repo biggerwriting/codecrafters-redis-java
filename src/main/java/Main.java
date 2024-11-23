@@ -48,10 +48,14 @@ public class Main {
         String line;
         while ((line = bufferedReader.readLine()) != null) {
             if (line.toLowerCase().contains("ping")) {
-                System.out.println("server received a new line:" + line);
+                System.out.println("server received a new [ping] line:" + line);
                 outputStream.write("+PONG\r\n".getBytes());
             } else if (line.toLowerCase().contains("echo")) {
-                String message = bufferedReader.readLine();
+                System.out.println("server received a new [echo] line:" + line);
+                String message = bufferedReader.readLine();// 这个数据是message的长度
+                System.out.println("message:" + message);
+                message = bufferedReader.readLine();
+                System.out.println("message:" + message);
                 outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
             }
 
