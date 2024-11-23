@@ -38,7 +38,7 @@ public class CommandHandle {
                     long expiry = Long.MAX_VALUE;
                     if ("px".equalsIgnoreCase(bufferedReader.readLine())) {
                         bufferedReader.readLine();
-                        expiry = Long.parseLong(bufferedReader.readLine());
+                        expiry = System.currentTimeMillis()+Long.parseLong(bufferedReader.readLine());
                     }
                     setDict.put(key, new ExpiryValue(value, expiry));
                 } else {
@@ -51,12 +51,14 @@ public class CommandHandle {
                 bufferedReader.readLine();
                 String key = bufferedReader.readLine();
                 ExpiryValue expiryValue = setDict.get(key);
+                System.out.println("get "+key +" : "+expiryValue);
 
                 if (null != expiryValue) {
                     String message = expiryValue.value;
                     if (expiryValue.expiry > System.currentTimeMillis()) {
                         outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
                     } else {
+                        //System.out.println("expired "+expiryValue.expiry+" vs "+System.currentTimeMillis());
                         setDict.remove(key);
                         outputStream.write("$-1\r\n".getBytes());
                     }

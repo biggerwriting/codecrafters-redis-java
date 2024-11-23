@@ -17,4 +17,12 @@ public class ExpiryValue {
         this.value = value;
         this.expiry = Long.MAX_VALUE;
     }
+
+    @Override
+    public String toString() {
+        return "ExpiryValue{" +
+                "value='" + value + '\'' +
+                ", expiry=" + expiry +
+                '}';
+    }
 }
