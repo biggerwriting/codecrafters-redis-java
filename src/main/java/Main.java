@@ -9,7 +9,7 @@ public class Main {
 
         //  Uncomment this block to pass the first stage
         ServerSocket serverSocket = null;
-        Socket clientSocket = null;
+         Socket clientSocket = null;
         int port = 6379;
         try {
             serverSocket = new ServerSocket(port);
@@ -18,17 +18,14 @@ public class Main {
             serverSocket.setReuseAddress(true);
             // Wait for connection from client.
             clientSocket = serverSocket.accept();
-            OutputStream outputStream = clientSocket.getOutputStream();
-            InputStream inputStream = clientSocket.getInputStream();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                if(line.toLowerCase().contains("ping")) {
-                    System.out.println("server received a new line:" + line);
-                    outputStream.write("+PONG\r\n".getBytes());
+            Socket finalClientSocket = clientSocket;
+            new Thread(()->{
+                try{
+                    handlePingCommend(finalClientSocket);
+                }catch (Exception e){
+                    System.out.println("Exception: " + e.getMessage());
                 }
-            }
-
+            }).start();
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
         } finally {
@@ -38,6 +35,19 @@ public class Main {
                 }
             } catch (IOException e) {
                 System.out.println("IOException: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void handlePingCommend(Socket clientSocket) throws IOException {
+        OutputStream outputStream = clientSocket.getOutputStream();
+        InputStream inputStream = clientSocket.getInputStream();
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+        String line;
+        while ((line = bufferedReader.readLine()) != null) {
+            if(line.toLowerCase().contains("ping")) {
+                System.out.println("server received a new line:" + line);
+                outputStream.write("+PONG\r\n".getBytes());
             }
         }
     }
