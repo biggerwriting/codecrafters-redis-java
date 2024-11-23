@@ -9,21 +9,21 @@ public class Main {
 
         //  Uncomment this block to pass the first stage
         ServerSocket serverSocket = null;
-         Socket clientSocket = null;
+        Socket clientSocket = null;
         int port = 6379;
         try {
             serverSocket = new ServerSocket(port);
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
             // ensures that we don't run into 'Address already in use' errors
             serverSocket.setReuseAddress(true);
-            while (true){
+            while (true) {
                 // Wait for connection from client.
                 clientSocket = serverSocket.accept();
                 Socket finalClientSocket = clientSocket;
-                new Thread(()->{
-                    try{
+                new Thread(() -> {
+                    try {
                         handlePingCommend(finalClientSocket);
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         System.out.println("Exception: " + e.getMessage());
                     }
                 }).start();
@@ -47,10 +47,14 @@ public class Main {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         String line;
         while ((line = bufferedReader.readLine()) != null) {
-            if(line.toLowerCase().contains("ping")) {
+            if (line.toLowerCase().contains("ping")) {
                 System.out.println("server received a new line:" + line);
                 outputStream.write("+PONG\r\n".getBytes());
+            } else if (line.toLowerCase().contains("echo")) {
+                String message = bufferedReader.readLine();
+                outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
             }
+
         }
     }
 }
