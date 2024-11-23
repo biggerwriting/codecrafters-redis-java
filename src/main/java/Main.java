@@ -4,7 +4,22 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
-    private static ConcurrentHashMap<String, String> setDict = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
+
+    class ExpiryValue{
+        final String value;
+        final long expiry;
+
+        public ExpiryValue(String value, long expiry) {
+            this.value = value;
+            this.expiry = expiry;
+        }
+
+        public ExpiryValue(String value) {
+            this.value = value;
+            this.expiry = Long.MAX_VALUE;
+        }
+    }
 
     public static void main(String[] args) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -44,7 +59,7 @@ public class Main {
         }
     }
 
-    private static void handleCommend(Socket clientSocket) throws IOException {
+    private void handleCommend(Socket clientSocket) throws IOException {
         OutputStream outputStream = clientSocket.getOutputStream();
         InputStream inputStream = clientSocket.getInputStream();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
@@ -67,15 +82,32 @@ public class Main {
                 String key = bufferedReader.readLine();
                 bufferedReader.readLine();
                 String value = bufferedReader.readLine();
-                setDict.put(key, value);
+                if(null!=bufferedReader.readLine()){
+                    long expiry = Long.MAX_VALUE;
+                    if ("px".equalsIgnoreCase(bufferedReader.readLine())) {
+                        bufferedReader.readLine();
+                        expiry = Long.parseLong(bufferedReader.readLine());
+                    }
+                    setDict.put(key, new ExpiryValue(value,expiry));
+                }else {
+
+                    setDict.put(key, new ExpiryValue(value));
+                }
                 outputStream.write("+OK\r\n".getBytes());
             } else if ("get".equalsIgnoreCase(line)) {
                 System.out.println("get command");
                 bufferedReader.readLine();
                 String key = bufferedReader.readLine();
-                String message = setDict.get(key);
-                if (null != message) {
-                    outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
+                ExpiryValue expiryValue = setDict.get(key);
+
+                if (null != expiryValue) {
+                    String message = expiryValue.value;
+                    if(expiryValue.expiry > System.currentTimeMillis()) {
+                        outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
+                    }else {
+                        setDict.remove(key);
+                        outputStream.write("$-1\r\n".getBytes());
+                    }
                 } else {
                     outputStream.write("$-1\r\n".getBytes());
                 }
