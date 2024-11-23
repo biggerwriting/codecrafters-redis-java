@@ -2,73 +2,107 @@ package demo;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Author: tongqianwen
  * @Date: 2024/11/23
  */
-public class CommandHandle {
+public class CommandHandle extends Thread {
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
 
-    public void handle(Socket clientSocket) throws IOException {
-        OutputStream outputStream = clientSocket.getOutputStream();
-        InputStream inputStream = clientSocket.getInputStream();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-        String line;
-        while ((line = bufferedReader.readLine()) != null) {
-            if ("ping".equalsIgnoreCase(line)) {
-                System.out.println("server received a new [ping] line:" + line);
-                //System.out.println("the whole command:"+new DataInputStream(inputStream).readUTF());
-                outputStream.write("+PONG\r\n".getBytes());
-            } else if ("echo".equalsIgnoreCase(line)) {
-                System.out.println("server received a new [echo] line:" + line);
-                String message = bufferedReader.readLine();// 这个数据是message的长度
-                System.out.println("message:" + message);
-                message = bufferedReader.readLine();
-                System.out.println("message:" + message);
-                outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
-            } else if ("set".equalsIgnoreCase(line)) {
-                System.out.println("set command");
-                bufferedReader.readLine();
-                String key = bufferedReader.readLine();
-                bufferedReader.readLine();
-                String value = bufferedReader.readLine();
-                if (null != bufferedReader.readLine()) {
-                    long expiry = Long.MAX_VALUE;
-                    if ("px".equalsIgnoreCase(bufferedReader.readLine())) {
-                        bufferedReader.readLine();
-                        expiry = System.currentTimeMillis()+Long.parseLong(bufferedReader.readLine());
-                    }
-                    setDict.put(key, new ExpiryValue(value, expiry));
-                } else {
+    private final Socket socket;
 
-                    setDict.put(key, new ExpiryValue(value));
-                }
-                outputStream.write("+OK\r\n".getBytes());
-            } else if ("get".equalsIgnoreCase(line)) {
-                System.out.println("get command");
-                bufferedReader.readLine();
-                String key = bufferedReader.readLine();
-                ExpiryValue expiryValue = setDict.get(key);
-                System.out.println("get "+key +" : "+expiryValue);
+    public CommandHandle(Socket socket) {
+        this.socket = socket;
+    }
 
-                if (null != expiryValue) {
-                    String message = expiryValue.value;
-                    if (expiryValue.expiry > System.currentTimeMillis()) {
-                        outputStream.write(String.format("$%d\r\n%s\r\n", message.length(), message).getBytes());
-                    } else {
-                        //System.out.println("expired "+expiryValue.expiry+" vs "+System.currentTimeMillis());
-                        setDict.remove(key);
-                        outputStream.write("$-1\r\n".getBytes());
+
+    void handle(Socket socket) throws IOException {
+        try (OutputStream outputStream = socket.getOutputStream();
+             InputStream inputStream = socket.getInputStream();
+             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+        ) {
+            char[] charArray = new char[1024];
+            System.out.println("read begin " + System.currentTimeMillis());
+            int readLength;
+            while ((readLength = inputStreamReader.read(charArray)) != -1) {
+                String line = new String(charArray, 0, readLength);
+                System.out.println("得到客户端请求：【" + line + "】");
+                String response = null;
+                List<String> tokens = parse(line);
+                System.out.println("命令参数：" + tokens);
+                switch (tokens.get(0).toUpperCase()) {
+                    case "PING": {
+                        response = "+PONG\r\n";
+                        break;
                     }
-                } else {
-                    outputStream.write("$-1\r\n".getBytes());
+                    case "ECHO": {
+                        String message = tokens.size() > 1 ? tokens.get(1) : "";
+                        response = String.format("$%d\r\n%s\r\n", message.length(), message);
+                        break;
+                    }
+                    case "GET": {
+                        ExpiryValue expiryValue = setDict.get(tokens.get(1));
+                        if (expiryValue != null && expiryValue.expiry > System.currentTimeMillis()) {
+                            String message = expiryValue.value;
+                            response = String.format("$%d\r\n%s\r\n", message.length(), message);
+                        } else {
+                            setDict.remove(tokens.get(1));
+                            response = "$-1\r\n";
+                        }
+                        break;
+                    }
+                    case "SET": {
+                        long expiry = Long.MAX_VALUE;
+                        if (tokens.size() > 3 && "px".equalsIgnoreCase(tokens.get(3))) {
+                            expiry = System.currentTimeMillis() + Long.parseLong(tokens.get(4));
+                        }
+                        setDict.put(tokens.get(1), new ExpiryValue(tokens.get(2), expiry));
+                        response = "+OK\r\n";
+                        break;
+                    }
+                    default: {
+                        response = "$-1\r\n";
+                        break;
+                    }
                 }
-            } else {
-                //System.out.println("   *** unkonw command:"+line);
+                System.out.println("response = " + response);
+                outputStream.write(response.getBytes());
             }
+            System.out.println("read end " + System.currentTimeMillis());
+        } catch (IOException e) {
+            System.out.println("IOException: " + e.getMessage());
+            e.printStackTrace();
+        }
 
+    }
+
+    List<String> parse(String param) {
+        List<String> args = new ArrayList<>();
+        if (param.startsWith("*")) {
+            String[] array = param.split("\r\n");
+            System.out.println(Arrays.asList(array));
+            int size = Integer.valueOf(array[0].substring(1));
+            System.out.println(size);
+            for (int i = 2; i < array.length; i += 2) {
+                args.add(array[i]);
+            }
+        } else {
+            args.add(param);
+        }
+        return args;
+    }
+
+    @Override
+    public void run() {
+        try {
+            handle(socket);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

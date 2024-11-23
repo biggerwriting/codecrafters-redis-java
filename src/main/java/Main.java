@@ -23,18 +23,14 @@ public class Main {
             // ensures that we don't run into 'Address already in use' errors
             serverSocket.setReuseAddress(true);
 
-            CommandHandle commandHandle = new CommandHandle();
             while (true) {
+                System.out.println("get a connection");
                 // Wait for connection from client.
                 clientSocket = serverSocket.accept();
-                Socket finalClientSocket = clientSocket;
-                new Thread(() -> {
-                    try {
-                        commandHandle.handle(finalClientSocket);
-                    } catch (Exception e) {
-                        System.out.println("Exception: " + e.getMessage());
-                    }
-                }).start();
+                CommandHandle commandHandle = new CommandHandle(clientSocket);
+                commandHandle.start();
+//                commandHandle.handle(clientSocket);
+                System.out.println("处理结束");
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
