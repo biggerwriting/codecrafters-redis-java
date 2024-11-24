@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @Author: tongqianwen
@@ -78,11 +79,17 @@ public class CommandHandle extends Thread {
                                 response ="*2\r\n"+ buildResponse(CONFIG_DBFILENAME)+buildResponse(dbfilename);
                             }
                         }else {
-
                             response = "$-1\r\n";
                         }
                         break;
 
+                    }
+                    case "KEYS":{
+                        ArrayList<String> keys = new ArrayList<>(setDict.keySet());
+                        if("*".equals(tokens.get(1))){
+                            response = "*" + keys.size()+"\r\n"+keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
+                        }
+                        break;
                     }
                     default: {
                         response = "$-1\r\n";
