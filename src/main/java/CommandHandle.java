@@ -270,7 +270,7 @@ public class CommandHandle extends Thread {
     }
 
     public static long bytesToLong(byte[] bytes) {
-        int num = 0;
+        long num = 0;
         for (int i = 7; i > -1; i--) {
             System.out.print(String.format("%02X", bytes[i])+",(" + i+")");
             num <<= 8;
