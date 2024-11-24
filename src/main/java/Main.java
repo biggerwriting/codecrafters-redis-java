@@ -21,16 +21,20 @@ public class Main {
                 CommandHandle.config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
             }
         }
+        // load database
+        if(CommandHandle.config.get(CommandHandle.CONFIG_DIR)!=null){
+            try {
+                CommandHandle.initSetDict();
+            } catch (Exception e) {
+                System.out.println("Exception: " + e.getMessage());
+            }
+        }
 
         //  Uncomment this block to pass the first stage
         ServerSocket serverSocket = null;
         Socket clientSocket = null;
         int port = 6379;
         try {
-            // load database
-            if(CommandHandle.config.get(CommandHandle.CONFIG_DIR)!=null){
-                CommandHandle.initSetDict();
-            }
             ExecutorService executor = Executors.newFixedThreadPool(5);
             serverSocket = new ServerSocket(port);
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
