@@ -69,11 +69,11 @@ public class CommandHandle extends Thread {
                     case "CONFIG":{
                         // the expected response to CONFIG GET dir is:
                         //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
-                        if("get".equalsIgnoreCase(tokens.get(2))){
-                            if(CONFIG_DIR.equalsIgnoreCase(tokens.get(3))){
+                        if("get".equalsIgnoreCase(tokens.get(1))){
+                            if(CONFIG_DIR.equalsIgnoreCase(tokens.get(2))){
                                 String dir = config.get(CONFIG_DIR);
                                 response ="*2\r\n"+ buildResponse(CONFIG_DIR)+buildResponse(dir);
-                            }else if(CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(3))){
+                            }else if(CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))){
                                 String dbfilename = config.get(CONFIG_DBFILENAME);
                                 response ="*2\r\n"+ buildResponse(CONFIG_DBFILENAME)+buildResponse(dbfilename);
                             }
