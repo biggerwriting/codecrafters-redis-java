@@ -167,7 +167,6 @@ public class CommandHandle extends Thread {
                 }
                 case 0xFD: {
                     System.out.println();
-                    System.out.println("EXPIRETIME");
                     break;
                 }
                 case 0xFC: {
@@ -180,7 +179,23 @@ public class CommandHandle extends Thread {
                     System.out.println("RESIZEDB");
                     int tableSize = in.read();
                     int expirySize = in.read();
+                    int noexpSize = tableSize - expirySize;
+                    long expTime = Long.MAX_VALUE;
                     for (int i = 0; i < tableSize; i++) {
+                        if (i >= noexpSize) {
+                            int expType = in.read();
+                            if (0xFC == expType) {
+                                System.out.println("EXPIRETIMEMS");
+                                byte[] info = new byte[8];
+                                in.read(info);
+                                expTime = bytesToLong(info);
+                                System.out.println("read 8-byte integer:" + expTime);
+
+                            } else if (0xFD == expType) {
+                                // todo
+                                System.out.println("EXPIRETIME");
+                            }
+                        }
                         int type = in.read();
                         int keyLength = in.read();
                         byte[] info = new byte[keyLength];
@@ -192,7 +207,7 @@ public class CommandHandle extends Thread {
                             info = new byte[valueLength];
                             in.read(info);
                             String value = new String(info, StandardCharsets.UTF_8);
-                            setDict.put(key, new ExpiryValue(value));
+                            setDict.put(key, new ExpiryValue(value,expTime));
                         }
                     }
                     break;
@@ -235,11 +250,11 @@ public class CommandHandle extends Thread {
 
     }
 
-    // 大端字节顺序
-    // 将byte数组转换为int，假设数组为大端字节顺序
+    // 小端字节顺序
+    // 将byte数组转换为int，假设数组为小端字节顺序
     public static int bytesToInt(byte[] bytes) {
         int num = 0;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 3; i > -1; i--) {
             num <<= 8;
             num |= (bytes[i] & 0xff);
         }
@@ -249,9 +264,18 @@ public class CommandHandle extends Thread {
     // 将byte数组转换为short，假设数组为大端字节顺序
     public static short bytesToShort(byte[] bytes) {
         short num = 0;
-        num |= (bytes[0] & 0xff);
-        num <<= 8;
         num |= (bytes[1] & 0xff);
+        num <<= 8;
+        num |= (bytes[0] & 0xff);
+        return num;
+    }
+
+    public static long bytesToLong(byte[] bytes) {
+        int num = 0;
+        for (int i = 7; i > -1; i--) {
+            num <<= 8;
+            num |= (bytes[i] & 0xff);
+        }
         return num;
     }
 
