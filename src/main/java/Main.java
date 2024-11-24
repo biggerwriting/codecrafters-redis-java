@@ -20,7 +20,6 @@ public class Main {
             if ("--dbfilename".equalsIgnoreCase(param)) {
                 CommandHandle.config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
             }
-
         }
 
         //  Uncomment this block to pass the first stage
@@ -28,6 +27,10 @@ public class Main {
         Socket clientSocket = null;
         int port = 6379;
         try {
+            // load database
+            if(CommandHandle.config.get(CommandHandle.CONFIG_DIR)!=null){
+                CommandHandle.initSetDict();
+            }
             ExecutorService executor = Executors.newFixedThreadPool(5);
             serverSocket = new ServerSocket(port);
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
@@ -54,4 +57,5 @@ public class Main {
             }
         }
     }
+
 }
