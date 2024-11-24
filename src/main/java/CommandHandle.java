@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 public class CommandHandle extends Thread {
     public static Map<String, String> config = new HashMap<String, String>();
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
-    public static final String CONFIG_DBFILENAME="dbfilename";
-    public static final String CONFIG_DIR="dir";
+    public static final String CONFIG_DBFILENAME = "dbfilename";
+    public static final String CONFIG_DIR = "dir";
 
     private final Socket socket;
 
@@ -68,27 +68,27 @@ public class CommandHandle extends Thread {
                         response = "+OK\r\n";
                         break;
                     }
-                    case "CONFIG":{
+                    case "CONFIG": {
                         // the expected response to CONFIG GET dir is:
                         //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
-                        if("get".equalsIgnoreCase(tokens.get(1))){
-                            if(CONFIG_DIR.equalsIgnoreCase(tokens.get(2))){
+                        if ("get".equalsIgnoreCase(tokens.get(1))) {
+                            if (CONFIG_DIR.equalsIgnoreCase(tokens.get(2))) {
                                 String dir = config.get(CONFIG_DIR);
-                                response ="*2\r\n"+ buildResponse(CONFIG_DIR)+buildResponse(dir);
-                            }else if(CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))){
+                                response = "*2\r\n" + buildResponse(CONFIG_DIR) + buildResponse(dir);
+                            } else if (CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))) {
                                 String dbfilename = config.get(CONFIG_DBFILENAME);
-                                response ="*2\r\n"+ buildResponse(CONFIG_DBFILENAME)+buildResponse(dbfilename);
+                                response = "*2\r\n" + buildResponse(CONFIG_DBFILENAME) + buildResponse(dbfilename);
                             }
-                        }else {
+                        } else {
                             response = "$-1\r\n";
                         }
                         break;
 
                     }
-                    case "KEYS":{
+                    case "KEYS": {
                         ArrayList<String> keys = new ArrayList<>(setDict.keySet());
-                        if("*".equals(tokens.get(1))){
-                            response = "*" + keys.size()+"\r\n"+keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
+                        if ("*".equals(tokens.get(1))) {
+                            response = "*" + keys.size() + "\r\n" + keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
                         }
                         break;
                     }
@@ -131,7 +131,7 @@ public class CommandHandle extends Thread {
     }
 
     public static void initSetDict() throws IOException {
-        String filename = config.get(CONFIG_DIR) + config.get(CONFIG_DBFILENAME);
+        String filename = config.get(CONFIG_DIR) + File.separator + config.get(CONFIG_DBFILENAME);
 
         FileInputStream fileInputStream = new FileInputStream(filename);
         System.out.println(fileInputStream);
@@ -152,7 +152,7 @@ public class CommandHandle extends Thread {
 
         // 循环取数据
         while ((b = in.read()) != -1) {
-            switch (b){
+            switch (b) {
                 case 0xFF: {
                     System.out.println();
                     System.out.println("EOF");
@@ -186,9 +186,9 @@ public class CommandHandle extends Thread {
                         byte[] info = new byte[keyLength];
                         in.read(info);
                         String key = new String(info, StandardCharsets.UTF_8);
-                        System.out.println(i+"- key=[" + key+"]");
+                        System.out.println(i + "- key=[" + key + "]");
                         int valueLength = in.read();
-                        if(0==type){
+                        if (0 == type) {
                             info = new byte[valueLength];
                             in.read(info);
                             String value = new String(info, StandardCharsets.UTF_8);
@@ -202,28 +202,28 @@ public class CommandHandle extends Thread {
                     System.out.println("AUX auxiliary fields. Arbitrary key-vales settings");
                     break;
                 }
-                case 0xC0:{
+                case 0xC0: {
                     b = in.read();
-                    System.out.println("读到8 bit integer:"+b);
+                    System.out.println("读到8 bit integer:" + b);
                     break;
                 }
-                case 0xC1:{
+                case 0xC1: {
                     byte[] info = new byte[2];
                     in.read(info);
-                    System.out.println("读到16 bit integer:"+bytesToShort(info));
+                    System.out.println("读到16 bit integer:" + bytesToShort(info));
                     break;
                 }
-                case 0xC2:{
+                case 0xC2: {
                     byte[] info = new byte[4];
                     in.read(info);
-                    System.out.println("读到32 bit integer:"+bytesToInt(info));
+                    System.out.println("读到32 bit integer:" + bytesToInt(info));
                     break;
                 }
                 default: {
                     System.out.println("未匹配 b = " + Integer.toHexString(b));
                     byte[] info = new byte[b];
                     in.read(info);
-                    System.out.println("读到：[" + new String(info, StandardCharsets.UTF_8)+"]");
+                    System.out.println("读到：[" + new String(info, StandardCharsets.UTF_8) + "]");
                     sb.append(b);
                     break;
                 }
@@ -231,7 +231,7 @@ public class CommandHandle extends Thread {
         }
         // 关闭流
         in.close();
-        System.out.println("全部字符串【"+sb+"】");
+        System.out.println("全部字符串【" + sb + "】");
 
     }
 
@@ -245,6 +245,7 @@ public class CommandHandle extends Thread {
         }
         return num;
     }
+
     // 将byte数组转换为short，假设数组为大端字节顺序
     public static short bytesToShort(byte[] bytes) {
         short num = 0;
@@ -253,6 +254,7 @@ public class CommandHandle extends Thread {
         num |= (bytes[1] & 0xff);
         return num;
     }
+
     @Override
     public void run() {
         try {
