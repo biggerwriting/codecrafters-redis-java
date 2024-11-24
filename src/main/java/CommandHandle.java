@@ -179,24 +179,23 @@ public class CommandHandle extends Thread {
                     System.out.println("RESIZEDB");
                     int tableSize = in.read();
                     int expirySize = in.read();
-                    int noexpSize = tableSize - expirySize;
+//                    int noexpSize = tableSize - expirySize;
                     long expTime = Long.MAX_VALUE;
                     for (int i = 0; i < tableSize; i++) {
-                        if (i >= noexpSize) {
-                            int expType = in.read();
-                            if (0xFC == expType) {
-                                System.out.println("EXPIRETIMEMS");
-                                byte[] info = new byte[8];
-                                in.read(info);
-                                expTime = bytesToLong(info);
-                                System.out.println("read 8-byte integer:" + expTime);
 
-                            } else if (0xFD == expType) {
-                                // todo
-                                System.out.println("EXPIRETIME");
-                            }
-                        }
                         int type = in.read();
+
+                        if (0xFC == type) {
+                            System.out.println("EXPIRETIMEMS");
+                            byte[] info = new byte[8];
+                            in.read(info);
+                            expTime = bytesToLong(info);
+                            System.out.println("read 8-byte integer:" + expTime);
+                            type = in.read();
+                        } else if (0xFD == type) {
+                            // todo
+                            System.out.println("EXPIRETIME");
+                        }
                         int keyLength = in.read();
                         byte[] info = new byte[keyLength];
                         in.read(info);
@@ -273,7 +272,17 @@ public class CommandHandle extends Thread {
     public static long bytesToLong(byte[] bytes) {
         int num = 0;
         for (int i = 7; i > -1; i--) {
+            System.out.print(String.format("%02X", bytes[i])+",(" + i+")");
             num <<= 8;
+            num |= (bytes[i] & 0xff);
+        }
+        return num;
+    }
+    public static int littleBytesToInt(byte[] bytes) {
+        int num = 0;
+        for (int i = 3; i > -1; i--) {
+            num <<= 8;
+            System.out.print(String.format("%02X", bytes[i])+",");
             num |= (bytes[i] & 0xff);
         }
         return num;
