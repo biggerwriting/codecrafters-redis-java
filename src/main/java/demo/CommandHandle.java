@@ -112,6 +112,10 @@ public class CommandHandle extends Thread {
                         response = "+OK\r\n";
                         break;
                     }
+                    case "PSYNC":{
+                        response = "+FULLRESYNC " +config.get(MASTER_REPLID)+ " 0\r\n";
+                        break;
+                    }
                     default: {
                         response = "$-1\r\n";
                         break;
