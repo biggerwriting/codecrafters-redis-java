@@ -6,29 +6,17 @@ import java.util.concurrent.Executors;
 
 import demo.CommandHandle;
 
+import static demo.CommandHandle.*;
+
 public class Main {
 
     public static void main(String[] args) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.out.println("Logs from your program will appear here!");
-        for (int i = 0; i < args.length; i++) {
-            //./your_program.sh  --dir /tmp/redis-files --dbfilename dump.rdb
-            String param = args[i];
-            if ("--dir".equalsIgnoreCase(param)) {
-                CommandHandle.config.put(CommandHandle.CONFIG_DIR, args[++i]);
-            } else if ("--dbfilename".equalsIgnoreCase(param)) {
-                CommandHandle.config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
-            } else if ("--port".equalsIgnoreCase(param)) {
-                CommandHandle.config.put("port", args[++i]);
-            } else if ("--replicaof".equalsIgnoreCase(param)) {// --replicaof "localhost 6379"
-                CommandHandle.config.put("role", "slave");
-                String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
-                CommandHandle.config.put(CommandHandle.MASTER_HOST, master[0]);
-                CommandHandle.config.put(CommandHandle.MASTER_PORT, master[1]);
-            }
-        }
+        // settings
+        settings(args);
         // load database
-        if (CommandHandle.config.get(CommandHandle.CONFIG_DIR) != null) {
+        if (config.get(CommandHandle.CONFIG_DIR) != null) {
             try {
                 CommandHandle.initSetDict();
             } catch (Exception e) {
@@ -68,10 +56,32 @@ public class Main {
         }
     }
 
+    private static void settings(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            //./your_program.sh  --dir /tmp/redis-files --dbfilename dump.rdb
+            String param = args[i];
+            if ("--dir".equalsIgnoreCase(param)) {
+                config.put(CommandHandle.CONFIG_DIR, args[++i]);
+            } else if ("--dbfilename".equalsIgnoreCase(param)) {
+                config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
+            } else if ("--port".equalsIgnoreCase(param)) {
+                config.put("port", args[++i]);
+            } else if ("--replicaof".equalsIgnoreCase(param)) {// --replicaof "localhost 6379"
+                config.put("role", "slave");
+                String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
+                config.put(CommandHandle.MASTER_HOST, master[0]);
+                config.put(CommandHandle.MASTER_PORT, master[1]);
+            }
+        }
+        // master_replid and master_repl_offset
+        config.put(MASTER_REPLID,"8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb");
+        config.put(MASTER_REPL_OFFSET,"0");
+    }
+
     private static int getPort() {
         try {
-            if (CommandHandle.config.get("port") != null) {
-                return Integer.parseInt(CommandHandle.config.get("port"));
+            if (config.get("port") != null) {
+                return Integer.parseInt(config.get("port"));
             }
         } catch (Exception e) {
             return 6379;

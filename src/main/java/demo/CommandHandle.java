@@ -18,6 +18,9 @@ public class CommandHandle extends Thread {
     public static final String CONFIG_DIR = "dir";
     public static final String MASTER_HOST = "MASTER_HOST";
     public static final String MASTER_PORT = "MASTER_PORT";
+    // master_replid and master_repl_offset
+    public static final String MASTER_REPLID = "master_replid";
+    public static final String MASTER_REPL_OFFSET = "master_repl_offset";
 
     private final Socket socket;
 
@@ -96,8 +99,12 @@ public class CommandHandle extends Thread {
                     }
                     case "INFO":{
                         if ("replication".equalsIgnoreCase(tokens.get(1))){
+                            StringBuilder stringBuilder = new StringBuilder();
                             String role = Optional.ofNullable(config.get("role")).orElse("master");
-                            response = buildResponse("role:"+role);
+                            stringBuilder.append(buildResponse("role:"+role));
+                            stringBuilder.append(buildResponse(MASTER_REPLID+":"+config.get(MASTER_REPLID)));
+                            stringBuilder.append(buildResponse(MASTER_REPL_OFFSET+":"+config.get(MASTER_REPL_OFFSET)));
+                            response = stringBuilder.toString();
                         }
                         break;
                     }
