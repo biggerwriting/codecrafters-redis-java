@@ -4,6 +4,8 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import demo.CommandHandle;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -14,12 +16,15 @@ public class Main {
             String param = args[i];
             if ("--dir".equalsIgnoreCase(param)) {
                 CommandHandle.config.put(CommandHandle.CONFIG_DIR, args[++i]);
-            }
-            if ("--dbfilename".equalsIgnoreCase(param)) {
+            } else if ("--dbfilename".equalsIgnoreCase(param)) {
                 CommandHandle.config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
-            }
-            if ("--port".equalsIgnoreCase(param)) {
+            } else if ("--port".equalsIgnoreCase(param)) {
                 CommandHandle.config.put("port", args[++i]);
+            } else if ("--replicaof".equalsIgnoreCase(param)) {// --replicaof "localhost 6379"
+                CommandHandle.config.put("role", "slave");
+                String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
+                CommandHandle.config.put(CommandHandle.MASTER_HOST, master[0]);
+                CommandHandle.config.put(CommandHandle.MASTER_PORT, master[1]);
             }
         }
         // load database

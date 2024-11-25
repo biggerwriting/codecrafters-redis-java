@@ -1,4 +1,4 @@
-import demo.ExpiryValue;
+package demo;
 
 import java.io.*;
 import java.net.Socket;
@@ -16,6 +16,8 @@ public class CommandHandle extends Thread {
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
     public static final String CONFIG_DBFILENAME = "dbfilename";
     public static final String CONFIG_DIR = "dir";
+    public static final String MASTER_HOST = "MASTER_HOST";
+    public static final String MASTER_PORT = "MASTER_PORT";
 
     private final Socket socket;
 
@@ -94,7 +96,8 @@ public class CommandHandle extends Thread {
                     }
                     case "INFO":{
                         if ("replication".equalsIgnoreCase(tokens.get(1))){
-                            response = buildResponse("role:master");
+                            String role = Optional.ofNullable(config.get("role")).orElse("master");
+                            response = buildResponse("role:"+role);
                         }
                         break;
                     }
