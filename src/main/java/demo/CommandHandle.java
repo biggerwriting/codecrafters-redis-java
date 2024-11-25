@@ -123,9 +123,19 @@ public class CommandHandle extends Thread {
 
     }
 
-    private static String buildResponse(String message) {
+    public static String buildResponse(String message) {
         String response;
         response = String.format("$%d\r\n%s\r\n", message.length(), message);
+        return response;
+    }
+    // # REPLCONF listening-port <PORT>
+    //*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n
+    public static String buildRespArray(String... messages) {
+        String response = "*"+messages.length+"\r\n";
+        for(String msg : messages){
+            response+=buildResponse(msg);
+        }
+       // response = String.format("$%d\r\n%s\r\n", message.length(), message);
         return response;
     }
 

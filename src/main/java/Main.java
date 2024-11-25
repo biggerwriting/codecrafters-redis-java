@@ -84,8 +84,17 @@ public class Main {
         int port = Integer.parseInt(config.get(MASTER_PORT));
 
         try (Socket socket = new Socket(host, port); InputStream inputStream = socket.getInputStream(); InputStreamReader inputStreamReader = new InputStreamReader(inputStream); BufferedReader bufferedReader = new BufferedReader(inputStreamReader); OutputStream outputStream = socket.getOutputStream();) {
+            // PING
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
-            System.out.println("得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
+            System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
+            // REPLCONF listening-port <PORT>
+            String message = buildRespArray("REPLCONF","listening-port",config.get(MASTER_PORT));
+            outputStream.write(message.getBytes());
+            System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
+            //REPLCONF capa psync2
+            message = buildRespArray("REPLCONF","capa","psync2");
+            outputStream.write(message.getBytes());
+            System.out.println("REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
 
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
