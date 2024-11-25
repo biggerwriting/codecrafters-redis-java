@@ -92,6 +92,12 @@ public class CommandHandle extends Thread {
                         }
                         break;
                     }
+                    case "INFO":{
+                        if ("replication".equalsIgnoreCase(tokens.get(1))){
+                            response = buildResponse("role:master");
+                        }
+                        break;
+                    }
                     default: {
                         response = "$-1\r\n";
                         break;
