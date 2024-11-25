@@ -41,7 +41,7 @@ public class CommandHandle extends Thread {
             while ((readLength = inputStreamReader.read(charArray)) != -1) {
                 String line = new String(charArray, 0, readLength);
                 System.out.println("得到客户端请求：【" + line + "】");
-                String response = null;
+                String response = "";
                 List<String> tokens = parse(line);
                 System.out.println("命令参数：" + tokens);
                 switch (tokens.get(0).toUpperCase()) {
@@ -114,6 +114,10 @@ public class CommandHandle extends Thread {
                     }
                     case "PSYNC":{
                         response = "+FULLRESYNC " +config.get(MASTER_REPLID)+ " 0\r\n";
+                        outputStream.write(response.getBytes());
+                        // $<length_of_file>\r\n<contents_of_file>
+                        String message = "abc";
+                        response = String.format("$%d\r\n%s", message.length(), message);
                         break;
                     }
                     default: {
