@@ -41,7 +41,7 @@ public class CommandHandle extends Thread {
             while ((readLength = inputStreamReader.read(charArray)) != -1) {
                 String line = new String(charArray, 0, readLength);
                 System.out.println("得到客户端请求：【" + line + "】");
-                String response = "";
+                String response = null;
                 List<String> tokens = parse(line);
                 System.out.println("命令参数：" + tokens);
                 switch (tokens.get(0).toUpperCase()) {
@@ -98,26 +98,32 @@ public class CommandHandle extends Thread {
                         }
                         break;
                     }
-                    case "INFO":{
-                        if ("replication".equalsIgnoreCase(tokens.get(1))){
+                    case "INFO": {
+                        if ("replication".equalsIgnoreCase(tokens.get(1))) {
                             String role = Optional.ofNullable(config.get("role")).orElse("master");
-                            String message = "role:"+role+"\r\n"+
-                                    MASTER_REPLID+":"+config.get(MASTER_REPLID)+"\r\n"+
-                                    MASTER_REPL_OFFSET+":"+config.get(MASTER_REPL_OFFSET);
+                            String message = "role:" + role + "\r\n" +
+                                    MASTER_REPLID + ":" + config.get(MASTER_REPLID) + "\r\n" +
+                                    MASTER_REPL_OFFSET + ":" + config.get(MASTER_REPL_OFFSET);
                             response = buildResponse(message);
                         }
                         break;
                     }
-                    case "REPLCONF":{
+                    case "REPLCONF": {
                         response = "+OK\r\n";
                         break;
                     }
-                    case "PSYNC":{
-                        response = "+FULLRESYNC " +config.get(MASTER_REPLID)+ " 0\r\n";
+                    case "PSYNC": {
+                        response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
                         outputStream.write(response.getBytes());
                         // $<length_of_file>\r\n<contents_of_file>
-                        String message = "abc";
-                        response = String.format("$%d\r\n%s", message.length(), message);
+                        // empty rdb file
+                        //byte[] content = HexFormat.of().parseHex("524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2");
+                        String base64 = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+                        byte[] bytes = Base64.getDecoder().decode(base64);
+                        response = String.format("$%d\r\n", bytes.length);
+                        outputStream.write(response.getBytes());
+                        outputStream.write(bytes);
+                        response = null;
                         break;
                     }
                     default: {
@@ -126,7 +132,9 @@ public class CommandHandle extends Thread {
                     }
                 }
                 System.out.println("response = " + response);
-                outputStream.write(response.getBytes());
+                if (response != null) {
+                    outputStream.write(response.getBytes());
+                }
             }
             System.out.println("read end " + System.currentTimeMillis());
         } catch (IOException e) {
@@ -141,14 +149,15 @@ public class CommandHandle extends Thread {
         response = String.format("$%d\r\n%s\r\n", message.length(), message);
         return response;
     }
+
     // # REPLCONF listening-port <PORT>
     //*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n
     public static String buildRespArray(String... messages) {
-        String response = "*"+messages.length+"\r\n";
-        for(String msg : messages){
-            response+=buildResponse(msg);
+        String response = "*" + messages.length + "\r\n";
+        for (String msg : messages) {
+            response += buildResponse(msg);
         }
-       // response = String.format("$%d\r\n%s\r\n", message.length(), message);
+        // response = String.format("$%d\r\n%s\r\n", message.length(), message);
         return response;
     }
 
@@ -244,7 +253,7 @@ public class CommandHandle extends Thread {
                             info = new byte[valueLength];
                             in.read(info);
                             String value = new String(info, StandardCharsets.UTF_8);
-                            setDict.put(key, new ExpiryValue(value,expTime));
+                            setDict.put(key, new ExpiryValue(value, expTime));
                         }
                     }
                     break;
@@ -310,17 +319,18 @@ public class CommandHandle extends Thread {
     public static long bytesToLong(byte[] bytes) {
         long num = 0;
         for (int i = 7; i > -1; i--) {
-            System.out.print(String.format("%02X", bytes[i])+",(" + i+")");
+            System.out.print(String.format("%02X", bytes[i]) + ",(" + i + ")");
             num <<= 8;
             num |= (bytes[i] & 0xff);
         }
         return num;
     }
+
     public static int littleBytesToInt(byte[] bytes) {
         int num = 0;
         for (int i = 3; i > -1; i--) {
             num <<= 8;
-            System.out.print(String.format("%02X", bytes[i])+",");
+            System.out.print(String.format("%02X", bytes[i]) + ",");
             num |= (bytes[i] & 0xff);
         }
         return num;
