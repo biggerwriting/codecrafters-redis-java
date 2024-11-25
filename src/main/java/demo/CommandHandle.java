@@ -108,6 +108,10 @@ public class CommandHandle extends Thread {
                         }
                         break;
                     }
+                    case "REPLCONF":{
+                        response = "+OK\r\n";
+                        break;
+                    }
                     default: {
                         response = "$-1\r\n";
                         break;
