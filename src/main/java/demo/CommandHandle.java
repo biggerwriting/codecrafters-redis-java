@@ -99,12 +99,11 @@ public class CommandHandle extends Thread {
                     }
                     case "INFO":{
                         if ("replication".equalsIgnoreCase(tokens.get(1))){
-                            StringBuilder stringBuilder = new StringBuilder();
                             String role = Optional.ofNullable(config.get("role")).orElse("master");
-                            stringBuilder.append(buildResponse("role:"+role));
-                            stringBuilder.append(buildResponse(MASTER_REPLID+":"+config.get(MASTER_REPLID)));
-                            stringBuilder.append(buildResponse(MASTER_REPL_OFFSET+":"+config.get(MASTER_REPL_OFFSET)));
-                            response = stringBuilder.toString();
+                            String message = "role:"+role+"\r\n"+
+                                    MASTER_REPLID+":"+config.get(MASTER_REPLID)+"\r\n"+
+                                    MASTER_REPL_OFFSET+":"+config.get(MASTER_REPL_OFFSET);
+                            response = buildResponse(message);
                         }
                         break;
                     }
