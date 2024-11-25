@@ -65,7 +65,7 @@ public class Main {
             } else if ("--dbfilename".equalsIgnoreCase(param)) {
                 config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
             } else if ("--port".equalsIgnoreCase(param)) {
-                config.put("port", args[++i]);
+                config.put(PORT, args[++i]);
             } else if ("--replicaof".equalsIgnoreCase(param)) {// --replicaof "localhost 6379"
                 config.put("role", "slave");
                 String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
@@ -88,7 +88,7 @@ public class Main {
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
             System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
             // REPLCONF listening-port <PORT>
-            String message = buildRespArray("REPLCONF","listening-port",config.get(MASTER_PORT));
+            String message = buildRespArray("REPLCONF","listening-port",config.get(PORT));
             outputStream.write(message.getBytes());
             System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
             //REPLCONF capa psync2

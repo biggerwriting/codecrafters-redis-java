@@ -17,6 +17,7 @@ public class CommandHandle extends Thread {
     public static final String CONFIG_DBFILENAME = "dbfilename";
     public static final String CONFIG_DIR = "dir";
     public static final String MASTER_HOST = "MASTER_HOST";
+    public static final String PORT = "port";
     public static final String MASTER_PORT = "MASTER_PORT";
     // master_replid and master_repl_offset
     public static final String MASTER_REPLID = "master_replid";
