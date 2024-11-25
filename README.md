@@ -32,3 +32,12 @@ Note: This section is for stages 2 and beyond.
    `src/main/java/Main.java`.
 1. Commit your changes and run `git push origin master` to submit your solution
    to CodeCrafters. Test output will be streamed to your terminal.
+
+# 本地执行
+- 主节点
+java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main
+- 从节点
+java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main  --port 6380 --replicaof "localhost 6379"
+- 查看两个服务的状态
+  .\redis-cli.exe -p 6380 info replication
+  .\redis-cli.exe -p 6379 info replication

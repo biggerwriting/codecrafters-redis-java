@@ -4,7 +4,9 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.stream.Collectors;
 
 /**
@@ -12,6 +14,8 @@ import java.util.stream.Collectors;
  * @Date: 2024/11/23
  */
 public class CommandHandle extends Thread {
+
+    private static BlockingQueue<String> blockingQueue = new LinkedBlockingDeque<>();
     public static Map<String, String> config = new HashMap<String, String>();
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
     public static final String CONFIG_DBFILENAME = "dbfilename";
@@ -66,6 +70,7 @@ public class CommandHandle extends Thread {
                         break;
                     }
                     case "SET": {
+                        blockingQueue.add(line);
                         long expiry = Long.MAX_VALUE;
                         if (tokens.size() > 3 && "px".equalsIgnoreCase(tokens.get(3))) {
                             expiry = System.currentTimeMillis() + Long.parseLong(tokens.get(4));
@@ -109,20 +114,27 @@ public class CommandHandle extends Thread {
                         break;
                     }
                     case "REPLCONF": {
+                        // todo 这里传了端口号的，后续应该要用 REPLCONF listening-port <PORT>
                         response = "+OK\r\n";
                         break;
                     }
                     case "PSYNC": {
+                        // 建立从服务连接
                         response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
                         outputStream.write(response.getBytes());
-                        // $<length_of_file>\r\n<contents_of_file>
-                        // empty rdb file
-                        //byte[] content = HexFormat.of().parseHex("524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2");
                         String base64 = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
                         byte[] bytes = Base64.getDecoder().decode(base64);
                         response = String.format("$%d\r\n", bytes.length);
                         outputStream.write(response.getBytes());
                         outputStream.write(bytes);
+                        try {
+                            while (inputStream.read()!=-1) {
+                                String element = blockingQueue.take();
+                                outputStream.write(element.getBytes());
+                            }
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                         response = null;
                         break;
                     }

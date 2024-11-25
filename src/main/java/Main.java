@@ -13,6 +13,9 @@ public class Main {
     public static void main(String[] args) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.out.println("Logs from your program will appear here!");
+        // 处理redis-cli请求的线程池
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+
         // settings
         settings(args);
         // load database
@@ -20,7 +23,7 @@ public class Main {
             try {
                 CommandHandle.initSetDict();
             } catch (Exception e) {
-                System.out.println("Exception: " + e.getMessage());
+                System.out.println("load database fail. Exception: " + e.getMessage());
             }
         }
 
@@ -29,7 +32,6 @@ public class Main {
         Socket clientSocket = null;
         int port = getPort();
         try {
-            ExecutorService executor = Executors.newFixedThreadPool(5);
             serverSocket = new ServerSocket(port);
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
             // ensures that we don't run into 'Address already in use' errors
@@ -79,11 +81,16 @@ public class Main {
         config.put(MASTER_REPL_OFFSET, "0");
     }
 
+    // 建立副本
     private static void handShake() {
         String host = config.get(MASTER_HOST);
         int port = Integer.parseInt(config.get(MASTER_PORT));
 
-        try (Socket socket = new Socket(host, port); InputStream inputStream = socket.getInputStream(); InputStreamReader inputStreamReader = new InputStreamReader(inputStream); BufferedReader bufferedReader = new BufferedReader(inputStreamReader); OutputStream outputStream = socket.getOutputStream();) {
+        try (Socket socket = new Socket(host, port);
+             InputStream inputStream = socket.getInputStream();
+             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+
+             OutputStream outputStream = socket.getOutputStream();) {
             // PING
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
             System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
@@ -99,7 +106,11 @@ public class Main {
             message = buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
             System.out.println("PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
-
+            // todo 实际服务器还有话说, 如何知道他说完了呢
+            while("".equals(message = readBuffLine(inputStreamReader))){
+                System.out.println("服务端还有话说：【" + message+ "】");
+            }
+            System.out.println("向服务器建立连接完毕");
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
             e.printStackTrace();
@@ -109,8 +120,11 @@ public class Main {
     private static String readBuffLine(InputStreamReader inputStreamReader) throws IOException {
         char[] charArray = new char[1024];
         int readLength = inputStreamReader.read(charArray);
-        String line = new String(charArray, 0, readLength);
-        return line;
+        if(readLength != -1){
+            return new String(charArray, 0, readLength);
+        }else {
+            return "";
+        }
     }
 
     private static int getPort() {
