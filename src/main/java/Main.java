@@ -1,8 +1,6 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,9 +18,12 @@ public class Main {
             if ("--dbfilename".equalsIgnoreCase(param)) {
                 CommandHandle.config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
             }
+            if ("--port".equalsIgnoreCase(param)) {
+                CommandHandle.config.put("port", args[++i]);
+            }
         }
         // load database
-        if(CommandHandle.config.get(CommandHandle.CONFIG_DIR)!=null){
+        if (CommandHandle.config.get(CommandHandle.CONFIG_DIR) != null) {
             try {
                 CommandHandle.initSetDict();
             } catch (Exception e) {
@@ -33,7 +34,7 @@ public class Main {
         //  Uncomment this block to pass the first stage
         ServerSocket serverSocket = null;
         Socket clientSocket = null;
-        int port = 6379;
+        int port = getPort();
         try {
             ExecutorService executor = Executors.newFixedThreadPool(5);
             serverSocket = new ServerSocket(port);
@@ -60,6 +61,17 @@ public class Main {
                 System.out.println("IOException: " + e.getMessage());
             }
         }
+    }
+
+    private static int getPort() {
+        try {
+            if (CommandHandle.config.get("port") != null) {
+                return Integer.parseInt(CommandHandle.config.get("port"));
+            }
+        } catch (Exception e) {
+            return 6379;
+        }
+        return 6379;
     }
 
 }
