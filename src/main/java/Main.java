@@ -1,4 +1,5 @@
 import demo.CommandHandle;
+import demo.ReplicaHandle;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -7,14 +8,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static demo.CommandHandle.*;
+import static demo.ReplicaHandle.handShake;
 
 public class Main {
+    // 处理redis-cli请求的线程池
+    static ExecutorService executor = Executors.newFixedThreadPool(5);
 
     public static void main(String[] args) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.out.println("Logs from your program will appear here!");
-        // 处理redis-cli请求的线程池
-        ExecutorService executor = Executors.newFixedThreadPool(5);
 
         // settings
         settings(args);
@@ -73,7 +75,9 @@ public class Main {
                 String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
                 config.put(CommandHandle.MASTER_HOST, master[0]);
                 config.put(CommandHandle.MASTER_PORT, master[1]);
-                handShake();
+
+                ReplicaHandle replicaHandle = new ReplicaHandle();
+                executor.execute(replicaHandle);
             }
         }
         // master_replid and master_repl_offset
@@ -81,51 +85,6 @@ public class Main {
         config.put(MASTER_REPL_OFFSET, "0");
     }
 
-    // 建立副本
-    private static void handShake() {
-        String host = config.get(MASTER_HOST);
-        int port = Integer.parseInt(config.get(MASTER_PORT));
-
-        try (Socket socket = new Socket(host, port);
-             InputStream inputStream = socket.getInputStream();
-             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-
-             OutputStream outputStream = socket.getOutputStream();) {
-            // PING
-            outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
-            System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
-            // REPLCONF listening-port <PORT>
-            String message = buildRespArray("REPLCONF", "listening-port", config.get(PORT));
-            outputStream.write(message.getBytes());
-            System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
-            //REPLCONF capa psync2
-            message = buildRespArray("REPLCONF", "capa", "psync2");
-            outputStream.write(message.getBytes());
-            System.out.println("REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
-            // PSYNC ? -1
-            message = buildRespArray("PSYNC", "?", "-1");
-            outputStream.write(message.getBytes());
-            System.out.println("PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
-            // todo 实际服务器还有话说, 如何知道他说完了呢
-            while("".equals(message = readBuffLine(inputStreamReader))){
-                System.out.println("服务端还有话说：【" + message+ "】");
-            }
-            System.out.println("向服务器建立连接完毕");
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private static String readBuffLine(InputStreamReader inputStreamReader) throws IOException {
-        char[] charArray = new char[1024];
-        int readLength = inputStreamReader.read(charArray);
-        if(readLength != -1){
-            return new String(charArray, 0, readLength);
-        }else {
-            return "";
-        }
-    }
 
     private static int getPort() {
         try {
