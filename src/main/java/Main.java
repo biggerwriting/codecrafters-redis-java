@@ -88,13 +88,17 @@ public class Main {
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
             System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
             // REPLCONF listening-port <PORT>
-            String message = buildRespArray("REPLCONF","listening-port",config.get(PORT));
+            String message = buildRespArray("REPLCONF", "listening-port", config.get(PORT));
             outputStream.write(message.getBytes());
             System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
             //REPLCONF capa psync2
-            message = buildRespArray("REPLCONF","capa","psync2");
+            message = buildRespArray("REPLCONF", "capa", "psync2");
             outputStream.write(message.getBytes());
             System.out.println("REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
+            // PSYNC ? -1
+            message = buildRespArray("PSYNC", "?", "-1");
+            outputStream.write(message.getBytes());
+            System.out.println("PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStreamReader) + "】");
 
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
