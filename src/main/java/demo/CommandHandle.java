@@ -128,12 +128,12 @@ public class CommandHandle extends Thread {
                         outputStream.write(response.getBytes());
                         outputStream.write(bytes);
                         try {
-                            while (inputStream.read()!=-1) {
+                            while (true) {
                                 String element = blockingQueue.take();
                                 outputStream.write(element.getBytes());
                             }
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
+                        } catch (Exception e) {
+                            System.out.println("slave connect error: " + e.getMessage());
                         }
                         response = null;
                         break;
