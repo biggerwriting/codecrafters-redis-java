@@ -35,7 +35,7 @@ public class Connection extends Thread {
             while (true) {
                 // Wait for connection from client.
                 Socket clientSocket = serverSocket.accept();
-                CommandHandle commandHandle = new CommandHandle(clientSocket, serverSocket, serverInfo);
+                CommandHandle commandHandle = new CommandHandle(clientSocket, serverInfo);
                 executor.execute(commandHandle);
             }
         } catch (IOException e) {

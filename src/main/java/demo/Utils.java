@@ -1,7 +1,6 @@
 package demo;
 
 import java.io.DataInputStream;
-import java.io.IOException;
 
 /**
  * @Author: tongqianwen
@@ -9,10 +8,16 @@ import java.io.IOException;
  */
 public class Utils {
 
-    public static String readBuffLine(DataInputStream inputStream) throws IOException {
+    public static String readBuffLine(DataInputStream inputStream) {
         byte[] array = new byte[1024];
-        int readLength = inputStream.read(array);
-        if (readLength != -1) {
+        int readLength = 0;
+        try {
+            readLength = inputStream.read(array);
+        } catch (Exception e) {
+            System.out.println("! read error: "+e.getMessage());
+            e.printStackTrace();
+        }
+        if (readLength > 0) {
             return new String(array, 0, readLength);
         } else {
             return "";

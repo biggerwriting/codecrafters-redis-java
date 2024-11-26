@@ -3,14 +3,14 @@ package demo;
 import domain.ServerInfo;
 
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.stream.Collectors;
+
+import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
  */
 public class CommandHandle extends Thread {
 
-    private static BlockingQueue<String> blockingQueue = new LinkedBlockingDeque<>();
     public static Map<String, String> config = new HashMap<String, String>();
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
     public static final String CONFIG_DBFILENAME = "dbfilename";
@@ -31,26 +30,30 @@ public class CommandHandle extends Thread {
     public static final String MASTER_REPL_OFFSET = "master_repl_offset";
 
     private final Socket socket;
-    private final ServerSocket serverSocket;
     private final ServerInfo serverInfo;
 
-    public CommandHandle(Socket socket, ServerSocket serverSocket, ServerInfo serverInfo) {
+    public CommandHandle(Socket socket, ServerInfo serverInfo) {
         this.socket = socket;
-        this.serverSocket = serverSocket;
         this.serverInfo = serverInfo;
     }
 
+    @Override
+    public void run() {
+        try {
+            handle(socket);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     void handle(Socket socket) throws IOException {
         try (OutputStream outputStream = socket.getOutputStream();
-             InputStream inputStream = socket.getInputStream();
-             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
-            char[] charArray = new char[1024];
+            byte[] array = new byte[1024];
             System.out.println("read begin " + System.currentTimeMillis());
-            int readLength;
-            while ((readLength = inputStreamReader.read(charArray)) != -1) {
-                String line = new String(charArray, 0, readLength);
+            String line;
+            while (!(line = readBuffLine(inputStream)).isEmpty()) {
                 System.out.println("得到客户端请求：【" + line + "】");
                 String response = null;
                 List<String> tokens = parse(line);
@@ -72,7 +75,6 @@ public class CommandHandle extends Thread {
                         break;
                     }
                     case "SET": {
-                        blockingQueue.add(line);
                         response = setCommand(tokens, line);
                         break;
                     }
@@ -187,9 +189,14 @@ public class CommandHandle extends Thread {
                 try {
                     replicaOutputStream.write(line.getBytes(StandardCharsets.UTF_8));
                     System.out.println("data sent to replicas");
-                } catch (IOException e) {
+                } catch (SocketException e) {
                     System.out.println("Error sending data to replica: " + e.getMessage());
-                    throw new RuntimeException(e);
+                    replicas.remove(replicaOutputStream);
+                    System.out.println("目前的slave服务数量：" + replicas.size());
+                } catch (Exception e) {
+                    System.out.println("Error sending data to replica: " + e.getMessage());
+                    e.printStackTrace();
+
                 }
             });
         }
@@ -212,8 +219,10 @@ public class CommandHandle extends Thread {
 
 
     public static String buildResponse(String message) {
-        String response;
-        response = String.format("$%d\r\n%s\r\n", message.length(), message);
+        String response = null;
+        if (null != message) {
+            response = String.format("$%d\r\n%s\r\n", message.length(), message);
+        }
         return response;
     }
 
@@ -403,12 +412,4 @@ public class CommandHandle extends Thread {
         return num;
     }
 
-    @Override
-    public void run() {
-        try {
-            handle(socket);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

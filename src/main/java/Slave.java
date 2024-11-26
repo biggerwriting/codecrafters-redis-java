@@ -40,9 +40,15 @@ public class Slave {
             // 作为redis服务器，处理cli请求
             new Connection(serverInfo).start();
 
+//            while (replicaMaster(inputStream)){
+//
+//            }
+
             // todo 实际服务器还有话说, 如何知道他说完了呢
             while (!(message = readBuffLine(inputStream)).isEmpty()) {
                 System.out.println("服务端还有话说：【" + message + "】");
+                //
+//                CommandHandle commandHandle = new CommandHandle(clientSocket, serverInfo);
             }
             System.out.println("向服务器建立连接完毕");
         } catch (IOException e) {
@@ -50,4 +56,9 @@ public class Slave {
             e.printStackTrace();
         }
     }
+
+//    private static boolean replicaMaster(DataInputStream inputStream) {
+//        String message = readBuffLine(inputStream);
+//        if ()
+//    }
 }

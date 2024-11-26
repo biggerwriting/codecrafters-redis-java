@@ -46,9 +46,6 @@ public class Main {
                 String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
                 serverInfo.setMasterHost(master[0]);
                 serverInfo.setMasterPort(master[1]);
-                // todo slave 怎么处理呢
-//                ReplicaHandle replicaHandle = new ReplicaHandle();
-//                executor.execute(replicaHandle);
             }
         }
         // master_replid and master_repl_offset
