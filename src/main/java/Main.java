@@ -1,6 +1,8 @@
 import demo.CommandHandle;
 import domain.ServerInfo;
 
+import java.io.File;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -22,7 +24,8 @@ public class Main {
     private static void loadDatabase(ServerInfo serverInfo) {
         if (serverInfo.getDir() != null && serverInfo.getDbfilename() != null) {
             try {
-                CommandHandle.initSetDict();
+                String fileName = serverInfo.getDir() + File.separator + serverInfo.getDbfilename();
+                CommandHandle.initSetDict(fileName);
             } catch (Exception e) {
                 System.out.println("load database fail. Exception: " + e.getMessage());
             }

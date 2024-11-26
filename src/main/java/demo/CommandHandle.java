@@ -17,8 +17,6 @@ import static demo.Utils.readBuffLine;
  * @Date: 2024/11/23
  */
 public class CommandHandle extends Thread {
-
-    public static Map<String, String> config = new HashMap<String, String>();
     public static ConcurrentHashMap<String, ExpiryValue> setDict = new ConcurrentHashMap<>();
     public static final String CONFIG_DBFILENAME = "dbfilename";
     public static final String CONFIG_DIR = "dir";
@@ -122,7 +120,7 @@ public class CommandHandle extends Thread {
             }
             case "PSYNC": {
                 // 建立从服务连接
-                response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
+                response = "+FULLRESYNC " + serverInfo.getMasterReplid()+  " 0\r\n";
                 break;
             }
             default: {
@@ -258,8 +256,7 @@ public class CommandHandle extends Thread {
         return args;
     }
 
-    public static void initSetDict() throws IOException {
-        String filename = config.get(CONFIG_DIR) + File.separator + config.get(CONFIG_DBFILENAME);
+    public static void initSetDict(String filename) throws IOException {
 
         FileInputStream fileInputStream = new FileInputStream(filename);
         System.out.println(fileInputStream);

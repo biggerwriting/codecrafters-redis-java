@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import static demo.CommandHandle.*;
+import static demo.CommandHandle.buildRespArray;
 import static demo.Utils.readBuffLine;
 
 /**
@@ -26,7 +26,7 @@ public class Slave {
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
             System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             // REPLCONF listening-port <PORT>
-            String message = buildRespArray("REPLCONF", "listening-port", config.get(PORT));
+            String message = buildRespArray("REPLCONF", "listening-port", String.valueOf(serverInfo.getPort()));
             outputStream.write(message.getBytes());
             System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             //REPLCONF capa psync2
