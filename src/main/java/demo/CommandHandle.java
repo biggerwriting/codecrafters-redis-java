@@ -116,6 +116,12 @@ public class CommandHandle extends Thread {
             case "REPLCONF": {
                 // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
                 response = "+OK\r\n";
+
+                String message = tokens.size() > 1 ? tokens.get(1) : "";
+                // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
+                if("REPLCONF".equalsIgnoreCase(message)){
+                    response =  buildRespArray("REPLCONF", "ACK", "0");
+                }
                 break;
             }
             case "PSYNC": {
