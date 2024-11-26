@@ -1,37 +1,19 @@
-package demo;
-
 import domain.ServerInfo;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 
 import static demo.CommandHandle.*;
-import static demo.CommandHandle.buildRespArray;
 import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
  * @Date: 2024/11/26
  */
-public class ReplicaHandle extends Thread {
-   final  ServerInfo serverInfo;
-
-    public ReplicaHandle(ServerInfo serverInfo) {
-        this.serverInfo =serverInfo;
-    }
-
-
-    @Override
-    public void run() {
-        try {
-            handShake();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    // 建立副本
-    public void handShake() {
+public class Slave {
+    public static void initiateSlaveConnection(ServerInfo serverInfo) {
 
         try (Socket socket = new Socket(serverInfo.getMasterHost(), Integer.parseInt(serverInfo.getMasterPort()));
 
@@ -54,9 +36,13 @@ public class ReplicaHandle extends Thread {
             message = buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
             System.out.println("PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+
+            // 作为redis服务器，处理cli请求
+            new Connection(serverInfo).start();
+
             // todo 实际服务器还有话说, 如何知道他说完了呢
-            while(!(message = readBuffLine(inputStream)).isEmpty()){
-                System.out.println("服务端还有话说：【" + message+ "】");
+            while (!(message = readBuffLine(inputStream)).isEmpty()) {
+                System.out.println("服务端还有话说：【" + message + "】");
             }
             System.out.println("向服务器建立连接完毕");
         } catch (IOException e) {

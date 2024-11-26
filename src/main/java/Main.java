@@ -1,100 +1,59 @@
 import demo.CommandHandle;
-import demo.ReplicaHandle;
-
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static demo.CommandHandle.*;
-import static demo.ReplicaHandle.handShake;
+import domain.ServerInfo;
 
 public class Main {
-    // 处理redis-cli请求的线程池
-    static ExecutorService executor = Executors.newFixedThreadPool(5);
 
     public static void main(String[] args) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         System.out.println("Logs from your program will appear here!");
+        ServerInfo serverInfo = initialize(args);
 
-        // settings
-        settings(args);
         // load database
-        if (config.get(CommandHandle.CONFIG_DIR) != null) {
+        loadDatabase(serverInfo);
+
+        if ("master".equals(serverInfo.getRole())) {
+            Connection connection = new Connection(serverInfo);
+            connection.initiateConnections();
+        } else {
+            Slave.initiateSlaveConnection(serverInfo);
+        }
+    }
+
+    private static void loadDatabase(ServerInfo serverInfo) {
+        if (serverInfo.getDir() != null && serverInfo.getDbfilename() != null) {
             try {
                 CommandHandle.initSetDict();
             } catch (Exception e) {
                 System.out.println("load database fail. Exception: " + e.getMessage());
             }
         }
-
-        //  Uncomment this block to pass the first stage
-        ServerSocket serverSocket = null;
-        Socket clientSocket = null;
-        int port = getPort();
-        try {
-            serverSocket = new ServerSocket(port);
-            // Since the tester restarts your program quite often, setting SO_REUSEADDR
-            // ensures that we don't run into 'Address already in use' errors
-            serverSocket.setReuseAddress(true);
-
-            while (true) {
-                System.out.println("get a connection");
-                // Wait for connection from client.
-                clientSocket = serverSocket.accept();
-                CommandHandle commandHandle = new CommandHandle(clientSocket);
-                executor.execute(commandHandle);
-                System.out.println("处理结束");
-            }
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
-        } finally {
-            try {
-                if (clientSocket != null) {
-                    clientSocket.close();
-                }
-            } catch (IOException e) {
-                System.out.println("IOException: " + e.getMessage());
-            }
-        }
     }
 
-    private static void settings(String[] args) {
+    private static ServerInfo initialize(String[] args) {
+        ServerInfo serverInfo = new ServerInfo();
+
         for (int i = 0; i < args.length; i++) {
             //./your_program.sh  --dir /tmp/redis-files --dbfilename dump.rdb
             String param = args[i];
             if ("--dir".equalsIgnoreCase(param)) {
-                config.put(CommandHandle.CONFIG_DIR, args[++i]);
+                serverInfo.setDir(args[++i]);
             } else if ("--dbfilename".equalsIgnoreCase(param)) {
-                config.put(CommandHandle.CONFIG_DBFILENAME, args[++i]);
+                serverInfo.setDbfilename(args[++i]);
             } else if ("--port".equalsIgnoreCase(param)) {
-                config.put(PORT, args[++i]);
+                serverInfo.setPort(Integer.parseInt(args[++i]));
             } else if ("--replicaof".equalsIgnoreCase(param)) {// --replicaof "localhost 6379"
-                config.put("role", "slave");
+                serverInfo.setRole("slave");
                 String[] master = args[++i].split(" ");// <MASTER_HOST> <MASTER_PORT>
-                config.put(CommandHandle.MASTER_HOST, master[0]);
-                config.put(CommandHandle.MASTER_PORT, master[1]);
-
-                ReplicaHandle replicaHandle = new ReplicaHandle();
-                executor.execute(replicaHandle);
+                serverInfo.setMasterHost(master[0]);
+                serverInfo.setMasterPort(master[1]);
+                // todo slave 怎么处理呢
+//                ReplicaHandle replicaHandle = new ReplicaHandle();
+//                executor.execute(replicaHandle);
             }
         }
         // master_replid and master_repl_offset
-        config.put(MASTER_REPLID, "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb");
-        config.put(MASTER_REPL_OFFSET, "0");
+        serverInfo.setMasterReplid("8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb");
+        serverInfo.setMasterReplOffset(0L);
+        return serverInfo;
     }
-
-
-    private static int getPort() {
-        try {
-            if (config.get("port") != null) {
-                return Integer.parseInt(config.get("port"));
-            }
-        } catch (Exception e) {
-            return 6379;
-        }
-        return 6379;
-    }
-
 }

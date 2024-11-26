@@ -1,6 +1,9 @@
 package demo;
 
+import domain.ServerInfo;
+
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -28,9 +31,13 @@ public class CommandHandle extends Thread {
     public static final String MASTER_REPL_OFFSET = "master_repl_offset";
 
     private final Socket socket;
+    private final ServerSocket serverSocket;
+    private final ServerInfo serverInfo;
 
-    public CommandHandle(Socket socket) {
+    public CommandHandle(Socket socket, ServerSocket serverSocket, ServerInfo serverInfo) {
         this.socket = socket;
+        this.serverSocket = serverSocket;
+        this.serverInfo = serverInfo;
     }
 
 
@@ -48,6 +55,8 @@ public class CommandHandle extends Thread {
                 String response = null;
                 List<String> tokens = parse(line);
                 System.out.println("命令参数：" + tokens);
+                // String command = tokens.get(0).toUpperCase();
+
                 switch (tokens.get(0).toUpperCase()) {
                     case "PING": {
                         response = "+PONG\r\n";
@@ -59,83 +68,37 @@ public class CommandHandle extends Thread {
                         break;
                     }
                     case "GET": {
-                        ExpiryValue expiryValue = setDict.get(tokens.get(1));
-                        if (expiryValue != null && expiryValue.expiry > System.currentTimeMillis()) {
-                            String message = expiryValue.value;
-                            response = buildResponse(message);
-                        } else {
-                            setDict.remove(tokens.get(1));
-                            response = "$-1\r\n";
-                        }
+                        response = getCommand(tokens);
                         break;
                     }
                     case "SET": {
                         blockingQueue.add(line);
-                        long expiry = Long.MAX_VALUE;
-                        if (tokens.size() > 3 && "px".equalsIgnoreCase(tokens.get(3))) {
-                            expiry = System.currentTimeMillis() + Long.parseLong(tokens.get(4));
-                        }
-                        setDict.put(tokens.get(1), new ExpiryValue(tokens.get(2), expiry));
-                        response = "+OK\r\n";
+                        response = setCommand(tokens, line);
                         break;
                     }
                     case "CONFIG": {
                         // the expected response to CONFIG GET dir is:
                         //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
-                        if ("get".equalsIgnoreCase(tokens.get(1))) {
-                            if (CONFIG_DIR.equalsIgnoreCase(tokens.get(2))) {
-                                String dir = config.get(CONFIG_DIR);
-                                response = "*2\r\n" + buildResponse(CONFIG_DIR) + buildResponse(dir);
-                            } else if (CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))) {
-                                String dbfilename = config.get(CONFIG_DBFILENAME);
-                                response = "*2\r\n" + buildResponse(CONFIG_DBFILENAME) + buildResponse(dbfilename);
-                            }
-                        } else {
-                            response = "$-1\r\n";
-                        }
+                        response = configCommand(tokens, serverInfo);
                         break;
 
                     }
                     case "KEYS": {
-                        ArrayList<String> keys = new ArrayList<>(setDict.keySet());
-                        if ("*".equals(tokens.get(1))) {
-                            response = "*" + keys.size() + "\r\n" + keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
-                        }
+                        response = keyCommand(tokens, response);
                         break;
                     }
                     case "INFO": {
-                        if ("replication".equalsIgnoreCase(tokens.get(1))) {
-                            String role = Optional.ofNullable(config.get("role")).orElse("master");
-                            String message = "role:" + role + "\r\n" +
-                                    MASTER_REPLID + ":" + config.get(MASTER_REPLID) + "\r\n" +
-                                    MASTER_REPL_OFFSET + ":" + config.get(MASTER_REPL_OFFSET);
-                            response = buildResponse(message);
-                        }
+                        response = infoCommand(tokens, response);
                         break;
                     }
                     case "REPLCONF": {
-                        // todo 这里传了端口号的，后续应该要用 REPLCONF listening-port <PORT>
+                        // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
                         response = "+OK\r\n";
                         break;
                     }
                     case "PSYNC": {
                         // 建立从服务连接
                         response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
-                        outputStream.write(response.getBytes());
-                        String base64 = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
-                        byte[] bytes = Base64.getDecoder().decode(base64);
-                        response = String.format("$%d\r\n", bytes.length);
-                        outputStream.write(response.getBytes());
-                        outputStream.write(bytes);
-                        try {
-                            while (true) {
-                                String element = blockingQueue.take();
-                                outputStream.write(element.getBytes());
-                            }
-                        } catch (Exception e) {
-                            System.out.println("slave connect error: " + e.getMessage());
-                        }
-                        response = null;
                         break;
                     }
                     default: {
@@ -144,9 +107,17 @@ public class CommandHandle extends Thread {
                     }
                 }
                 System.out.println("response = " + response);
+
+                // 建立从连接
                 if (response != null) {
-                    outputStream.write(response.getBytes());
+                    outputStream.write(response.getBytes(StandardCharsets.UTF_8));
+                    if (response.startsWith("+FULLRESYNC")) {
+                        serverInfo.getReplicas().add(outputStream);
+                        sendEmpteyRDBFile(outputStream);
+                    }
                 }
+
+
             }
             System.out.println("read end " + System.currentTimeMillis());
         } catch (IOException e) {
@@ -155,6 +126,90 @@ public class CommandHandle extends Thread {
         }
 
     }
+
+    private static void sendEmpteyRDBFile(OutputStream outputStream) throws IOException {
+        String response;
+        String base64 = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+        byte[] bytes = Base64.getDecoder().decode(base64);
+        response = String.format("$%d\r\n", bytes.length);
+        outputStream.write(response.getBytes());
+        outputStream.write(bytes);
+    }
+
+    private String infoCommand(List<String> tokens, String response) {
+        if ("replication".equalsIgnoreCase(tokens.get(1))) {
+            String role = serverInfo.getRole();
+            String message = "role:" + role + "\r\n" +
+                    MASTER_REPLID + ":" + serverInfo.getMasterReplid() + "\r\n" +
+                    MASTER_REPL_OFFSET + ":" + serverInfo.getMasterReplOffset();
+            response = buildResponse(message);
+        }
+        return response;
+    }
+
+    private static String keyCommand(List<String> tokens, String response) {
+        ArrayList<String> keys = new ArrayList<>(setDict.keySet());
+        if ("*".equals(tokens.get(1))) {
+            response = "*" + keys.size() + "\r\n" + keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
+        }
+        return response;
+    }
+
+    private static String configCommand(List<String> tokens, ServerInfo serverInfo) {
+        String response = null;
+        if ("get".equalsIgnoreCase(tokens.get(1))) {
+            if (CONFIG_DIR.equalsIgnoreCase(tokens.get(2))) {
+                String dir = serverInfo.getDir();
+                response = "*2\r\n" + buildResponse(CONFIG_DIR) + buildResponse(dir);
+            } else if (CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))) {
+                String dbfilename = serverInfo.getDbfilename();
+                response = "*2\r\n" + buildResponse(CONFIG_DBFILENAME) + buildResponse(dbfilename);
+            }
+        } else {
+            response = "$-1\r\n";
+        }
+        return response;
+    }
+
+    private String setCommand(List<String> tokens, String line) {
+        String response;
+        long expiry = Long.MAX_VALUE;
+        if (tokens.size() > 3 && "px".equalsIgnoreCase(tokens.get(3))) {
+            expiry = System.currentTimeMillis() + Long.parseLong(tokens.get(4));
+        }
+        setDict.put(tokens.get(1), new ExpiryValue(tokens.get(2), expiry));
+
+        if (serverInfo.getRole().equalsIgnoreCase("master")
+                && !serverInfo.getReplicas().isEmpty()) {
+            System.out.println("Sending data to replicas");
+            Set<OutputStream> replicas = serverInfo.getReplicas();
+            replicas.forEach(replicaOutputStream -> {
+                try {
+                    replicaOutputStream.write(line.getBytes(StandardCharsets.UTF_8));
+                    System.out.println("data sent to replicas");
+                } catch (IOException e) {
+                    System.out.println("Error sending data to replica: " + e.getMessage());
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+        response = "+OK\r\n";
+        return response;
+    }
+
+    private static String getCommand(List<String> tokens) {
+        String response;
+        ExpiryValue expiryValue = setDict.get(tokens.get(1));
+        if (expiryValue != null && expiryValue.expiry > System.currentTimeMillis()) {
+            String message = expiryValue.value;
+            response = buildResponse(message);
+        } else {
+            setDict.remove(tokens.get(1));
+            response = "$-1\r\n";
+        }
+        return response;
+    }
+
 
     public static String buildResponse(String message) {
         String response;

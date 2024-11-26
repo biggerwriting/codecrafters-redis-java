@@ -1,7 +1,7 @@
 package demo;
 
+import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
 /**
  * @Author: tongqianwen
@@ -9,12 +9,12 @@ import java.io.InputStreamReader;
  */
 public class Utils {
 
-    public static String readBuffLine(InputStreamReader inputStreamReader) throws IOException {
-        char[] charArray = new char[1024];
-        int readLength = inputStreamReader.read(charArray);
-        if(readLength != -1){
-            return new String(charArray, 0, readLength);
-        }else {
+    public static String readBuffLine(DataInputStream inputStream) throws IOException {
+        byte[] array = new byte[1024];
+        int readLength = inputStream.read(array);
+        if (readLength != -1) {
+            return new String(array, 0, readLength);
+        } else {
             return "";
         }
     }
