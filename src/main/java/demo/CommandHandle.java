@@ -55,60 +55,8 @@ public class CommandHandle extends Thread {
             String line;
             while (!(line = readBuffLine(inputStream)).isEmpty()) {
                 System.out.println("得到客户端请求：【" + line + "】");
-                String response = null;
-                List<String> tokens = parse(line);
-                System.out.println("命令参数：" + tokens);
-                // String command = tokens.get(0).toUpperCase();
-
-                switch (tokens.get(0).toUpperCase()) {
-                    case "PING": {
-                        response = "+PONG\r\n";
-                        break;
-                    }
-                    case "ECHO": {
-                        String message = tokens.size() > 1 ? tokens.get(1) : "";
-                        response = buildResponse(message);
-                        break;
-                    }
-                    case "GET": {
-                        response = getCommand(tokens);
-                        break;
-                    }
-                    case "SET": {
-                        response = setCommand(tokens, line);
-                        break;
-                    }
-                    case "CONFIG": {
-                        // the expected response to CONFIG GET dir is:
-                        //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
-                        response = configCommand(tokens, serverInfo);
-                        break;
-
-                    }
-                    case "KEYS": {
-                        response = keyCommand(tokens, response);
-                        break;
-                    }
-                    case "INFO": {
-                        response = infoCommand(tokens, response);
-                        break;
-                    }
-                    case "REPLCONF": {
-                        // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
-                        response = "+OK\r\n";
-                        break;
-                    }
-                    case "PSYNC": {
-                        // 建立从服务连接
-                        response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
-                        break;
-                    }
-                    default: {
-                        response = "$-1\r\n";
-                        break;
-                    }
-                }
-                System.out.println("response = " + response);
+                String response = processCommand(line);
+                System.out.println("返回响应=====：【" + response + "】");
 
                 // 建立从连接
                 if (response != null) {
@@ -119,7 +67,6 @@ public class CommandHandle extends Thread {
                     }
                 }
 
-
             }
             System.out.println("read end " + System.currentTimeMillis());
         } catch (IOException e) {
@@ -127,6 +74,64 @@ public class CommandHandle extends Thread {
             e.printStackTrace();
         }
 
+    }
+
+    public String processCommand(String line) throws IOException {
+        String response = null;
+        List<String> tokens = parse(line);
+        System.out.println("命令参数：" + tokens);
+        // String command = tokens.get(0).toUpperCase();
+
+        switch (tokens.get(0).toUpperCase()) {
+            case "PING": {
+                response = "+PONG\r\n";
+                break;
+            }
+            case "ECHO": {
+                String message = tokens.size() > 1 ? tokens.get(1) : "";
+                response = buildResponse(message);
+                break;
+            }
+            case "GET": {
+                response = getCommand(tokens);
+                break;
+            }
+            case "SET": {
+                response = setCommand(tokens, line);
+                break;
+            }
+            case "CONFIG": {
+                // the expected response to CONFIG GET dir is:
+                //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
+                response = configCommand(tokens, serverInfo);
+                break;
+
+            }
+            case "KEYS": {
+                response = keyCommand(tokens, response);
+                break;
+            }
+            case "INFO": {
+                response = infoCommand(tokens, response);
+                break;
+            }
+            case "REPLCONF": {
+                // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
+                response = "+OK\r\n";
+                break;
+            }
+            case "PSYNC": {
+                // 建立从服务连接
+                response = "+FULLRESYNC " + config.get(MASTER_REPLID) + " 0\r\n";
+                break;
+            }
+            default: {
+                response = "$-1\r\n";
+                break;
+            }
+        }
+        System.out.println("response = " + response);
+        return response;
     }
 
     private static void sendEmpteyRDBFile(OutputStream outputStream) throws IOException {

@@ -1,3 +1,4 @@
+import demo.CommandHandle;
 import domain.ServerInfo;
 
 import java.io.DataInputStream;
@@ -47,10 +48,11 @@ public class Slave {
             // todo 实际服务器还有话说, 如何知道他说完了呢
             while (!(message = readBuffLine(inputStream)).isEmpty()) {
                 System.out.println("服务端还有话说：【" + message + "】");
-                //
-//                CommandHandle commandHandle = new CommandHandle(clientSocket, serverInfo);
+                // 处理set命令
+                CommandHandle commandHandle = new CommandHandle(socket, serverInfo);
+                commandHandle.processCommand(message);
             }
-            System.out.println("向服务器建立连接完毕");
+            System.out.println("向服务器建立连接完毕, 服务器异常断开连接");
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
             e.printStackTrace();
