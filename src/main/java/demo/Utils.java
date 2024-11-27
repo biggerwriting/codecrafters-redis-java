@@ -1,5 +1,7 @@
 package demo;
 
+import domain.ServerInfo;
+
 import java.io.DataInputStream;
 
 /**
@@ -23,4 +25,19 @@ public class Utils {
             return "";
         }
     }
+
+//    public static void main(String[] args) {
+//        log(new ServerInfo(), "hh","w\r\neee");
+//    }
+    public static void log(ServerInfo serverInfo, String... msg) {
+        StringBuffer sb = new StringBuffer();
+        sb.append("[" + serverInfo.getRole()+"]");
+        for (int i = 0; i < msg.length; i++) {
+           // sb.append(lists[i].replaceAll("\n","\\\\n").replaceAll("\r","\\\\r"));
+            sb.append(msg[i].replace("\n","\\n").replace("\r","\\r"));
+        }
+        System.out.println(sb);
+
+    }
+
 }

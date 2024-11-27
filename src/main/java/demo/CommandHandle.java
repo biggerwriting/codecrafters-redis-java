@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static demo.Utils.log;
 import static demo.Utils.readBuffLine;
 
 /**
@@ -52,9 +53,9 @@ public class CommandHandle extends Thread {
             System.out.println("[" + serverInfo.getRole()+"]"+"read begin " + System.currentTimeMillis());
             String line;
             while (!(line = readBuffLine(inputStream)).isEmpty()) {
-                System.out.println("[" + serverInfo.getRole()+"]"+"得到客户端请求：【" + line + "】");
+                log(serverInfo, "得到客户端请求：【",line,"】");
                 String response = processCommand(line);
-                System.out.println("[" + serverInfo.getRole()+"]"+"返回响应=====：【" + response + "】");
+                log(serverInfo, "返回响应【",response,"】");
 
                 if (response != null) {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
@@ -133,7 +134,8 @@ public class CommandHandle extends Thread {
                 break;
             }
         }
-        System.out.println("[" + serverInfo.getRole()+"]"+"response = " + response);
+
+        log(serverInfo, "response = ",response);
         return response;
     }
 
@@ -191,7 +193,7 @@ public class CommandHandle extends Thread {
 
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-            System.out.println("[" + serverInfo.getRole()+"]"+"Sending data to replicas");
+            System.out.println("[" + serverInfo.getRole()+"]"+"Sending data to replicas -> "+tokens);
             Set<OutputStream> replicas = serverInfo.getReplicas();
             replicas.forEach(replicaOutputStream -> {
                 try {
@@ -250,9 +252,8 @@ public class CommandHandle extends Thread {
         List<String> args = new ArrayList<>();
         if (param.startsWith("*")) {
             String[] array = param.split("\r\n");
-            System.out.println(Arrays.asList(array));
             int size = Integer.valueOf(array[0].substring(1));
-            System.out.println(size);
+            System.out.println("parse "+size+" "+Arrays.asList(array));
             for (int i = 2; i < array.length; i += 2) {
                 args.add(array[i]);
             }

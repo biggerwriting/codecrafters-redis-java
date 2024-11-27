@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 import static demo.CommandHandle.buildRespArray;
+import static demo.Utils.log;
 import static demo.Utils.readBuffLine;
 
 /**
@@ -47,7 +48,8 @@ public class Slave {
 
             // todo 实际服务器还有话说, 如何知道他说完了呢
             while (!(message = readBuffLine(inputStream)).isEmpty()) {
-                System.out.println("服务端还有话说：【" + message + "】");
+
+                log(serverInfo, "服务端还有话说【",message,"】");
                 // 处理set命令
                 CommandHandle commandHandle = new CommandHandle(socket, serverInfo);
                 String response = commandHandle.processCommand(message);
@@ -55,9 +57,9 @@ public class Slave {
                     //outputStream.write(response.getBytes());
                 }
             }
-            System.out.println("向服务器建立连接完毕, 服务器异常断开连接");
+            System.out.println("[" + serverInfo.getRole()+"]"+"ERROR 向服务器建立连接完毕, 服务器异常断开连接");
         } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+            System.out.println("[" + serverInfo.getRole()+"]"+"IOException: " + e.getMessage());
             e.printStackTrace();
         }
     }
