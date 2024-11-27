@@ -58,7 +58,7 @@ public class Slave {
                     String response = commandHandle.processCommand(singleCommand);
 
                     //The master will then send REPLCONF GETACK * to your replica. It'll expect to receive REPLCONF ACK 0 as a reply.
-                    if("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n".equalsIgnoreCase(response)){
+                    if("REPLCONF".equalsIgnoreCase(response)){
                         outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     }
                 }

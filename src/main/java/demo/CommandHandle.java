@@ -136,7 +136,7 @@ public class CommandHandle extends Thread {
 
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
-                if("REPLCONF".equalsIgnoreCase(message)){
+                if("GETACK".equalsIgnoreCase(message)){
                     response =  buildRespArray("REPLCONF", "ACK", "0");
                 }
                 break;
