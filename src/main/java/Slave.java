@@ -24,19 +24,19 @@ public class Slave {
             // slave 三次握手和 master建立连接
             // PING
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
-            System.out.println("PING 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            System.out.println("[" + serverInfo.getRole()+"]"+"PING 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             // REPLCONF listening-port <PORT>
             String message = buildRespArray("REPLCONF", "listening-port", String.valueOf(serverInfo.getPort()));
             outputStream.write(message.getBytes());
-            System.out.println("REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            System.out.println("[" + serverInfo.getRole()+"]"+"REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             //REPLCONF capa psync2
             message = buildRespArray("REPLCONF", "capa", "psync2");
             outputStream.write(message.getBytes());
-            System.out.println("REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            System.out.println("[" + serverInfo.getRole()+"]"+"REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             // PSYNC ? -1
             message = buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
-            System.out.println("PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            System.out.println("[" + serverInfo.getRole()+"]"+"PSYNC ? -1 得到服务端输出：【" + readBuffLine(inputStream) + "】");
 
             // 作为redis服务器，处理cli请求
             new Connection(serverInfo).start();
@@ -50,7 +50,10 @@ public class Slave {
                 System.out.println("服务端还有话说：【" + message + "】");
                 // 处理set命令
                 CommandHandle commandHandle = new CommandHandle(socket, serverInfo);
-                commandHandle.processCommand(message);
+                String response = commandHandle.processCommand(message);
+                if("+PONG\r\n".equals(response)){
+                    //outputStream.write(response.getBytes());
+                }
             }
             System.out.println("向服务器建立连接完毕, 服务器异常断开连接");
         } catch (IOException e) {

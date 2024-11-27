@@ -49,26 +49,25 @@ public class CommandHandle extends Thread {
              DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
             byte[] array = new byte[1024];
-            System.out.println("read begin " + System.currentTimeMillis());
+            System.out.println("[" + serverInfo.getRole()+"]"+"read begin " + System.currentTimeMillis());
             String line;
             while (!(line = readBuffLine(inputStream)).isEmpty()) {
-                System.out.println("得到客户端请求：【" + line + "】");
+                System.out.println("[" + serverInfo.getRole()+"]"+"得到客户端请求：【" + line + "】");
                 String response = processCommand(line);
-                System.out.println("返回响应=====：【" + response + "】");
+                System.out.println("[" + serverInfo.getRole()+"]"+"返回响应=====：【" + response + "】");
 
-                // 建立从连接
                 if (response != null) {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
+                    // 建立从连接
                     if (response.startsWith("+FULLRESYNC")) {
                         serverInfo.getReplicas().add(outputStream);
                         sendEmpteyRDBFile(outputStream);
                     }
                 }
-
             }
-            System.out.println("read end " + System.currentTimeMillis());
+            System.out.println("[" + serverInfo.getRole()+"]"+"read end " + System.currentTimeMillis());
         } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+            System.out.println("[" + serverInfo.getRole()+"]"+"IOException: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -77,7 +76,7 @@ public class CommandHandle extends Thread {
     public String processCommand(String line) throws IOException {
         String response = null;
         List<String> tokens = parse(line);
-        System.out.println("命令参数：" + tokens);
+        System.out.println("[" + serverInfo.getRole()+"]"+"命令参数：" + tokens);
         // String command = tokens.get(0).toUpperCase();
 
         switch (tokens.get(0).toUpperCase()) {
@@ -134,7 +133,7 @@ public class CommandHandle extends Thread {
                 break;
             }
         }
-        System.out.println("response = " + response);
+        System.out.println("[" + serverInfo.getRole()+"]"+"response = " + response);
         return response;
     }
 
@@ -192,23 +191,24 @@ public class CommandHandle extends Thread {
 
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-            System.out.println("Sending data to replicas");
+            System.out.println("[" + serverInfo.getRole()+"]"+"Sending data to replicas");
             Set<OutputStream> replicas = serverInfo.getReplicas();
             replicas.forEach(replicaOutputStream -> {
                 try {
                     replicaOutputStream.write(line.getBytes(StandardCharsets.UTF_8));
-                    System.out.println("data sent to replicas");
+                    System.out.println("[" + serverInfo.getRole()+"]"+"data sent to replicas");
                 } catch (SocketException e) {
-                    System.out.println("Error sending data to replica: " + e.getMessage());
+                    System.out.println("[" + serverInfo.getRole()+"]"+"Error sending data to replica: " + e.getMessage());
                     replicas.remove(replicaOutputStream);
-                    System.out.println("目前的slave服务数量：" + replicas.size());
+                    System.out.println("[" + serverInfo.getRole()+"]"+"目前的slave服务数量：" + replicas.size());
                 } catch (Exception e) {
-                    System.out.println("Error sending data to replica: " + e.getMessage());
+                    System.out.println("[" + serverInfo.getRole()+"]"+"Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
 
                 }
             });
         }
+        System.out.println("[" + serverInfo.getRole()+"]"+"setDict finished, size = "+setDict.size());
         response = "+OK\r\n";
         return response;
     }

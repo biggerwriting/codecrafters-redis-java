@@ -34,6 +34,9 @@ Note: This section is for stages 2 and beyond.
    to CodeCrafters. Test output will be streamed to your terminal.
 
 # 本地执行
+- 支持加载持久化文件
+  --dir "C:\资料夹\软件安装包\redis for windows\Redis-x64-5.0.14.1\dataBase"
+  --dbfilename dump.rdb
 - 主节点
 java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main
 - 从节点
@@ -41,3 +44,4 @@ java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\clas
 - 查看两个服务的状态
   .\redis-cli.exe -p 6380 info replication
   .\redis-cli.exe -p 6379 info replication
+- C:\\资料夹\\软件安装包\\'redis for windows'\\Redis-x64-5.0.14.1\\redis-cli.exe -p 6379

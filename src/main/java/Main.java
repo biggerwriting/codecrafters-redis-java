@@ -14,9 +14,11 @@ public class Main {
         loadDatabase(serverInfo);
 
         if ("master".equals(serverInfo.getRole())) {
+            System.out.println("master set up");
             Connection connection = new Connection(serverInfo);
             connection.initiateConnections();
         } else {
+            System.out.println("slave set up");
             Slave.initiateSlaveConnection(serverInfo);
         }
     }
