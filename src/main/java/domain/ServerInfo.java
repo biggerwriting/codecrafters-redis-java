@@ -9,6 +9,13 @@ import java.util.Set;
  * @Date: 2024/11/26
  */
 public class ServerInfo {
+    public static final ServerInfo singleton = new ServerInfo();
+    private ServerInfo(){
+    }
+
+    public static ServerInfo getInstance(){
+        return singleton;
+    }
     private String role = "master";
     private int port = 6379;
     private String dir;

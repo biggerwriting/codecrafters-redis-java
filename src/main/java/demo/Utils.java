@@ -16,7 +16,7 @@ public class Utils {
         try {
             readLength = inputStream.read(array);
         } catch (Exception e) {
-            System.out.println("! read error: "+e.getMessage());
+            System.out.println("! read error: " + e.getMessage());
             e.printStackTrace();
         }
         if (readLength > 0) {
@@ -26,15 +26,19 @@ public class Utils {
         }
     }
 
-//    public static void main(String[] args) {
+    //    public static void main(String[] args) {
 //        log(new ServerInfo(), "hh","w\r\neee");
 //    }
+    public static void log(String... msg) {
+        log(ServerInfo.getInstance(),  msg);
+    }
+
     public static void log(ServerInfo serverInfo, String... msg) {
         StringBuffer sb = new StringBuffer();
-        sb.append("[" + serverInfo.getRole()+"]");
+        sb.append("[" + serverInfo.getRole() + "]");
         for (int i = 0; i < msg.length; i++) {
-           // sb.append(lists[i].replaceAll("\n","\\\\n").replaceAll("\r","\\\\r"));
-            sb.append(msg[i].replace("\n","\\n").replace("\r","\\r"));
+            // sb.append(lists[i].replaceAll("\n","\\\\n").replaceAll("\r","\\\\r"));
+            sb.append(msg[i].replace("\n", "\\n").replace("\r", "\\r"));
         }
         System.out.println(sb);
 

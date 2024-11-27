@@ -74,6 +74,23 @@ public class CommandHandle extends Thread {
 
     }
 
+    public static void main(String[] args) throws IOException {
+        String line = "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n*3\r\n$3\r\nSET\r\n$3\r\nbar\r\n$3\r\n456\r\n*3\r\n$3\r\nSET\r\n$3\r\nbaz\r\n$3\r\n789\r\n";
+        String[] split = line.split("\\*");
+        for (int i = 0; i < split.length; i++) {
+           log("split = "+split.length+" " +split[i]);
+        }
+
+        line = "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n";
+        split = line.split("\\*");
+        for (int i = 0; i < split.length; i++) {
+            log("split = "+split.length+" " +split[i]);
+        }
+
+        CommandHandle commandHandle = new CommandHandle(null, ServerInfo.getInstance());
+        String s = commandHandle.processCommand(line);
+        System.out.println("s = "+s);
+    }
     public String processCommand(String line) throws IOException {
         String response = null;
         List<String> tokens = parse(line);

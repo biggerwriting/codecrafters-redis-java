@@ -35,7 +35,7 @@ public class Main {
     }
 
     private static ServerInfo initialize(String[] args) {
-        ServerInfo serverInfo = new ServerInfo();
+        ServerInfo serverInfo = ServerInfo.getInstance();
 
         for (int i = 0; i < args.length; i++) {
             //./your_program.sh  --dir /tmp/redis-files --dbfilename dump.rdb
