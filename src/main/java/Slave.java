@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 import static demo.CommandHandle.buildRespArray;
 import static demo.Utils.log;
@@ -55,6 +56,11 @@ public class Slave {
                     // 处理set命令
                     CommandHandle commandHandle = new CommandHandle(socket, serverInfo);
                     String response = commandHandle.processCommand(singleCommand);
+
+                    //The master will then send REPLCONF GETACK * to your replica. It'll expect to receive REPLCONF ACK 0 as a reply.
+                    if("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n".equalsIgnoreCase(response)){
+                        outputStream.write(response.getBytes(StandardCharsets.UTF_8));
+                    }
                 }
             }
             System.out.println("[" + serverInfo.getRole()+"]"+"ERROR 向服务器建立连接完毕, 服务器异常断开连接");
