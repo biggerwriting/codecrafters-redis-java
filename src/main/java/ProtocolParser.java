@@ -45,7 +45,12 @@ public class ProtocolParser {
         System.out.println("array size: "+size);
         List<String> array = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            array.add(parseBulkString(inputStream));
+            Object obj = parseInput(inputStream);
+            if(obj instanceof String){
+                array.add((String) obj);
+            }else {
+                throw new RuntimeException("unhandled type "+ obj.getClass());
+            }
         }
         return array;
     }
@@ -111,8 +116,6 @@ public class ProtocolParser {
     }
 
     public static String buildSimpleString(String token) {
-//        StringBuilder sb = new StringBuilder();
-//        sb.append("$").append(token.length()).append("\r\n").append(token).append("\r\n");
         return  String.format("$%d\r\n%s\r\n", token.length(), token);
     }
 
