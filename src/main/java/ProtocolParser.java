@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static demo.Utils.log;
+
 /**
  * @Author: tongqianwen
  * @Date: 2024/11/27
@@ -49,26 +51,28 @@ public class ProtocolParser {
                 throw new RuntimeException("unhandled type " + obj);
             }
         }
+        log("array【",array.toString(),"】");
         return array;
     }
 
     // +OK\r\n
     private static String parseSimpleString(DataInputStream inputStream) throws IOException {
         String line = inputStream.readLine();
+        log("simple string【",line,"】");
         return line;
     }
 
     // $<length>\r\n<data>\r\n
     private static String parseBulkString(DataInputStream inputStream) throws IOException {
-
         int length = Integer.parseInt(inputStream.readLine());
         System.out.println("bulk string length: " + length);
-//        return "";
-
         byte[] array = new byte[length];
-        int read = inputStream.read(array);
-        System.out.println("read array returns:" + read);
-        return new String(array, 0, length);
+        inputStream.read(array);
+//        System.out.println("read array returns:" + read);
+        String s = new String(array, 0, length);
+        log("bulk string【",s,"】");
+        inputStream.readLine();
+        return s;
     }
 
     private static int parseDigits(DataInputStream inputStream) throws IOException {
@@ -83,25 +87,26 @@ public class ProtocolParser {
 
     public static void main(String[] args) throws IOException {
         char plus = '+';
-        System.out.println(Integer.toHexString(plus));
+        // System.out.println(Integer.toHexString(plus));// 2b
 
         plus = '\r';
-        System.out.println(Integer.toHexString(plus));
+        // System.out.println(Integer.toHexString(plus));//d
         plus = '\n';
-        System.out.println(Integer.toHexString(plus));
+        // System.out.println(Integer.toHexString(plus));//a
         String ipStr = "+FULLRESYNC 71dc 0\r\n" +
                 "$8\r\n" +
                 "REDIS0011\r\n";
         DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-        String s = (String) parseInput(dataInputStream);
-        System.out.println("1. parseIput: " + s);
+//        String s = (String) parseInput(dataInputStream);
+//        System.out.println("1. parseIput: " + s);
+//
+//        s = (String) parseInput(dataInputStream);
+//        System.out.println("2. parseIput: " + s);
 
-        s = (String) parseInput(dataInputStream);
-        System.out.println("2. parseIput: " + s);
-        int b;
-//        while ((b = dataInputStream.read()) != -1) {
-//            System.out.println("read byte: " + (char) b);
-//        }
+        ipStr="*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
+        dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
+        System.out.println("找错误："+parseInput(dataInputStream));
+
     }
 
     public static String buildArray(List<String> array) {
