@@ -44,10 +44,6 @@ public class Slave {
             // 作为redis服务器，处理cli请求
             new Connection(serverInfo).start();
 
-//            while (replicaMaster(inputStream)){
-//
-//            }
-
             // todo 实际服务器还有话说, 如何知道他说完了呢
             Object readMsg;
             while (null != (readMsg = ProtocolParser.parseInput(inputStream))) {
@@ -62,7 +58,7 @@ public class Slave {
                     String response = commandHandle.processCommand(array);
 
                     //The master will then send REPLCONF GETACK * to your replica. It'll expect to receive REPLCONF ACK 0 as a reply.
-                    if ("REPLCONF".equalsIgnoreCase(response)) {
+                    if ("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n".equalsIgnoreCase(response)) {
                         outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     }
                 } else {
