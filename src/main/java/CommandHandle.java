@@ -136,7 +136,7 @@ public class CommandHandle extends Thread {
                 break;
             }
             case "WAIT": {
-                response = ":0\r\n";
+                response = String.format(":%d\r\n", serverInfo.getReplicas().size());
                 break;
             }
             default: {

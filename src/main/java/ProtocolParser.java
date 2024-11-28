@@ -113,7 +113,10 @@ public class ProtocolParser {
         return String.format("$%d\r\n%s\r\n", token.length(), token);
     }
 
+    public static String buildInteger(int num){
 
+        return String.format(":%d\r\n", num);
+    }
     public static String buildResponse(String message) {
         String response = null;
         if (null != message) {
