@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static demo.Utils.log;
-import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
@@ -48,13 +47,21 @@ public class CommandHandle extends Thread {
         try (OutputStream outputStream = socket.getOutputStream();
              DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
-            byte[] array = new byte[1024];
-            System.out.println("[" + serverInfo.getRole()+"]"+"read begin " + System.currentTimeMillis());
-            String line;
-            while (!(line = readBuffLine(inputStream)).isEmpty()) {
-                log(serverInfo, "得到客户端请求：【",line,"】");
-                String response = processCommand(line);
-                log(serverInfo, "返回响应【",response,"】");
+            System.out.println("[" + serverInfo.getRole() + "]" + "read begin " + System.currentTimeMillis());
+            Object readMsg;
+            String response = null;
+            while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
+                log(serverInfo, "得到客户端请求 string：【", readMsg.toString(), "】");
+                if (readMsg instanceof String) {
+                    response = processCommand(Collections.singletonList((String) readMsg));
+                } else if (readMsg instanceof List) {
+                    List<String> array = (List<String>) readMsg;
+                    log(serverInfo, "得到客户端请求 list：【", array.toString(), "】");
+                    response = processCommand(array);
+                } else {
+                    log(serverInfo, "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
+                }
+                log(serverInfo, "返回响应【", response, "】");
 
                 if (response != null) {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
@@ -65,9 +72,9 @@ public class CommandHandle extends Thread {
                     }
                 }
             }
-            System.out.println("[" + serverInfo.getRole()+"]"+"read end " + System.currentTimeMillis());
+            System.out.println("[" + serverInfo.getRole() + "]" + "read end " + System.currentTimeMillis());
         } catch (IOException e) {
-            System.out.println("[" + serverInfo.getRole()+"]"+"IOException: " + e.getMessage());
+            System.out.println("[" + serverInfo.getRole() + "]" + "IOException: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -76,7 +83,7 @@ public class CommandHandle extends Thread {
     public String processCommand(List<String> tokens) throws IOException {
 
         String response = null;
-        System.out.println("[" + serverInfo.getRole()+"]"+"命令参数：" + tokens);
+        System.out.println("[" + serverInfo.getRole() + "]" + "命令参数：" + tokens);
         // String command = tokens.get(0).toUpperCase();
 
         switch (tokens.get(0).toUpperCase()) {
@@ -118,17 +125,17 @@ public class CommandHandle extends Thread {
 
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
-                if("GETACK".equalsIgnoreCase(message)){
-                    response =  ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getMasterReplOffset()-37));
+                if ("GETACK".equalsIgnoreCase(message)) {
+                    response = ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getMasterReplOffset() - 37));
                 }
                 break;
             }
             case "PSYNC": {
                 // 建立从服务连接
-                response = "+FULLRESYNC " + serverInfo.getMasterReplid()+  " 0\r\n";
+                response = "+FULLRESYNC " + serverInfo.getMasterReplid() + " 0\r\n";
                 break;
             }
-            case "WAIT":{
+            case "WAIT": {
                 response = ":0\r\n";
                 break;
             }
@@ -138,75 +145,10 @@ public class CommandHandle extends Thread {
             }
         }
 
-        log(serverInfo, "response = ",response);
+        log(serverInfo, "response = ", response);
         return response;
     }
 
-
-    public String processCommand(String line) throws IOException {
-        String response = null;
-        List<String> tokens = parse(line);
-        System.out.println("[" + serverInfo.getRole()+"]"+"命令参数：" + tokens);
-        // String command = tokens.get(0).toUpperCase();
-
-        switch (tokens.get(0).toUpperCase()) {
-            case "PING": {
-                response = "+PONG\r\n";
-                break;
-            }
-            case "ECHO": {
-                String message = tokens.size() > 1 ? tokens.get(1) : "";
-                response = ProtocolParser.buildSimpleString(message);
-                break;
-            }
-            case "GET": {
-                response = getCommand(tokens);
-                break;
-            }
-            case "SET": {
-                response = setCommand(tokens);
-                break;
-            }
-            case "CONFIG": {
-                // the expected response to CONFIG GET dir is:
-                //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
-                response = configCommand(tokens, serverInfo);
-                break;
-
-            }
-            case "KEYS": {
-                response = keyCommand(tokens, response);
-                break;
-            }
-            case "INFO": {
-                response = infoCommand(tokens, response);
-                break;
-            }
-            case "REPLCONF": {
-                // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
-                response = "+OK\r\n";
-
-                String message = tokens.size() > 1 ? tokens.get(1) : "";
-                // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
-                if("GETACK".equalsIgnoreCase(message)){
-                    response =  ProtocolParser.buildRespArray("REPLCONF", "ACK", "0");
-                }
-                break;
-            }
-            case "PSYNC": {
-                // 建立从服务连接
-                response = "+FULLRESYNC " + serverInfo.getMasterReplid()+  " 0\r\n";
-                break;
-            }
-            default: {
-                response = "$-1\r\n";
-                break;
-            }
-        }
-
-        log(serverInfo, "response = ",response);
-        return response;
-    }
 
     private static void sendEmpteyRDBFile(OutputStream outputStream) throws IOException {
         String response;
@@ -241,10 +183,10 @@ public class CommandHandle extends Thread {
         if ("get".equalsIgnoreCase(tokens.get(1))) {
             if (CONFIG_DIR.equalsIgnoreCase(tokens.get(2))) {
                 String dir = serverInfo.getDir();
-                response = ProtocolParser.buildRespArray(CONFIG_DIR,dir);
+                response = ProtocolParser.buildRespArray(CONFIG_DIR, dir);
             } else if (CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))) {
                 String dbfilename = serverInfo.getDbfilename();
-                response = ProtocolParser.buildRespArray(CONFIG_DBFILENAME,dbfilename);
+                response = ProtocolParser.buildRespArray(CONFIG_DBFILENAME, dbfilename);
             }
         } else {
             response = "$-1\r\n";
@@ -262,24 +204,24 @@ public class CommandHandle extends Thread {
 
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-            System.out.println("[" + serverInfo.getRole()+"]"+"Sending data to replicas -> "+tokens);
+            System.out.println("[" + serverInfo.getRole() + "]" + "Sending data to replicas -> " + tokens);
             Set<OutputStream> replicas = serverInfo.getReplicas();
             replicas.forEach(replicaOutputStream -> {
                 try {
                     replicaOutputStream.write(ProtocolParser.buildArray(tokens).getBytes(StandardCharsets.UTF_8));
-                    System.out.println("[" + serverInfo.getRole()+"]"+"data sent to replicas");
+                    System.out.println("[" + serverInfo.getRole() + "]" + "data sent to replicas");
                 } catch (SocketException e) {
-                    System.out.println("[" + serverInfo.getRole()+"]"+"Error sending data to replica: " + e.getMessage());
+                    System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
                     replicas.remove(replicaOutputStream);
-                    System.out.println("[" + serverInfo.getRole()+"]"+"目前的slave服务数量：" + replicas.size());
+                    System.out.println("[" + serverInfo.getRole() + "]" + "目前的slave服务数量：" + replicas.size());
                 } catch (Exception e) {
-                    System.out.println("[" + serverInfo.getRole()+"]"+"Error sending data to replica: " + e.getMessage());
+                    System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
 
                 }
             });
         }
-        System.out.println("[" + serverInfo.getRole()+"]"+"setDict finished, size = "+setDict.size());
+        System.out.println("[" + serverInfo.getRole() + "]" + "setDict finished, size = " + setDict.size());
         response = "+OK\r\n";
         return response;
     }
@@ -303,7 +245,7 @@ public class CommandHandle extends Thread {
         if (param.startsWith("*")) {
             String[] array = param.split("\r\n");
             int size = Integer.valueOf(array[0].substring(1));
-            System.out.println("parse "+size+" "+Arrays.asList(array));
+            System.out.println("parse " + size + " " + Arrays.asList(array));
             for (int i = 2; i < array.length; i += 2) {
                 args.add(array[i]);
             }
