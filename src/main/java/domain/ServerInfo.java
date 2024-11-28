@@ -26,12 +26,20 @@ public class ServerInfo {
     private String masterPort;
     private String masterReplid;
     private Long masterReplOffset = 0L;
+    private Long slaveOffset = 0L;
+    private volatile Set<OutputStream> replicas = new HashSet<>();
 
     public void addOffset(long offset) {
-        this.masterReplOffset += offset;
+        this.slaveOffset += offset;
     }
 
-    private volatile Set<OutputStream> replicas = new HashSet<>();
+    public Long getSlaveOffset() {
+        return slaveOffset;
+    }
+
+    public void setSlaveOffset(Long slaveOffset) {
+        this.slaveOffset = slaveOffset;
+    }
 
     public String getRole() {
         return role;
