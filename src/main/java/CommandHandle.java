@@ -1,5 +1,4 @@
-package demo;
-
+import demo.ExpiryValue;
 import domain.ServerInfo;
 
 import java.io.*;
@@ -74,26 +73,9 @@ public class CommandHandle extends Thread {
 
     }
 
-    public static void main(String[] args) throws IOException {
-        String line = "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n*3\r\n$3\r\nSET\r\n$3\r\nbar\r\n$3\r\n456\r\n*3\r\n$3\r\nSET\r\n$3\r\nbaz\r\n$3\r\n789\r\n";
-        String[] split = line.split("\\*");
-        for (int i = 0; i < split.length; i++) {
-           log("split = "+split.length+" " +split[i]);
-        }
+    public String processCommand(List<String> tokens) throws IOException {
 
-        line = "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n123\r\n";
-        split = line.split("\\*");
-        for (int i = 0; i < split.length; i++) {
-            log("split = "+split.length+" " +split[i]);
-        }
-
-        CommandHandle commandHandle = new CommandHandle(null, ServerInfo.getInstance());
-        String s = commandHandle.processCommand(line);
-        System.out.println("s = "+s);
-    }
-    public String processCommand(String line) throws IOException {
         String response = null;
-        List<String> tokens = parse(line);
         System.out.println("[" + serverInfo.getRole()+"]"+"命令参数：" + tokens);
         // String command = tokens.get(0).toUpperCase();
 
@@ -104,7 +86,7 @@ public class CommandHandle extends Thread {
             }
             case "ECHO": {
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
-                response = buildResponse(message);
+                response = ProtocolParser.buildSimpleString(message);
                 break;
             }
             case "GET": {
@@ -112,7 +94,7 @@ public class CommandHandle extends Thread {
                 break;
             }
             case "SET": {
-                response = setCommand(tokens, line);
+                response = setCommand(tokens);
                 break;
             }
             case "CONFIG": {
@@ -137,7 +119,73 @@ public class CommandHandle extends Thread {
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
                 if("GETACK".equalsIgnoreCase(message)){
-                    response =  buildRespArray("REPLCONF", "ACK", "0");
+                    response =  ProtocolParser.buildRespArray("REPLCONF", "ACK", "0");
+                }
+                break;
+            }
+            case "PSYNC": {
+                // 建立从服务连接
+                response = "+FULLRESYNC " + serverInfo.getMasterReplid()+  " 0\r\n";
+                break;
+            }
+            default: {
+                response = "$-1\r\n";
+                break;
+            }
+        }
+
+        log(serverInfo, "response = ",response);
+        return response;
+    }
+
+
+    public String processCommand(String line) throws IOException {
+        String response = null;
+        List<String> tokens = parse(line);
+        System.out.println("[" + serverInfo.getRole()+"]"+"命令参数：" + tokens);
+        // String command = tokens.get(0).toUpperCase();
+
+        switch (tokens.get(0).toUpperCase()) {
+            case "PING": {
+                response = "+PONG\r\n";
+                break;
+            }
+            case "ECHO": {
+                String message = tokens.size() > 1 ? tokens.get(1) : "";
+                response = ProtocolParser.buildSimpleString(message);
+                break;
+            }
+            case "GET": {
+                response = getCommand(tokens);
+                break;
+            }
+            case "SET": {
+                response = setCommand(tokens);
+                break;
+            }
+            case "CONFIG": {
+                // the expected response to CONFIG GET dir is:
+                //*2\r\n$3\r\ndir\r\n$16\r\n/tmp/redis-files\r\n
+                response = configCommand(tokens, serverInfo);
+                break;
+
+            }
+            case "KEYS": {
+                response = keyCommand(tokens, response);
+                break;
+            }
+            case "INFO": {
+                response = infoCommand(tokens, response);
+                break;
+            }
+            case "REPLCONF": {
+                // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
+                response = "+OK\r\n";
+
+                String message = tokens.size() > 1 ? tokens.get(1) : "";
+                // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
+                if("GETACK".equalsIgnoreCase(message)){
+                    response =  ProtocolParser.buildRespArray("REPLCONF", "ACK", "0");
                 }
                 break;
             }
@@ -171,7 +219,7 @@ public class CommandHandle extends Thread {
             String message = "role:" + role + "\r\n" +
                     MASTER_REPLID + ":" + serverInfo.getMasterReplid() + "\r\n" +
                     MASTER_REPL_OFFSET + ":" + serverInfo.getMasterReplOffset();
-            response = buildResponse(message);
+            response = ProtocolParser.buildResponse(message);
         }
         return response;
     }
@@ -179,7 +227,7 @@ public class CommandHandle extends Thread {
     private static String keyCommand(List<String> tokens, String response) {
         ArrayList<String> keys = new ArrayList<>(setDict.keySet());
         if ("*".equals(tokens.get(1))) {
-            response = "*" + keys.size() + "\r\n" + keys.stream().map(CommandHandle::buildResponse).collect(Collectors.joining());
+            response = "*" + keys.size() + "\r\n" + keys.stream().map(ProtocolParser::buildResponse).collect(Collectors.joining());
         }
         return response;
     }
@@ -189,10 +237,10 @@ public class CommandHandle extends Thread {
         if ("get".equalsIgnoreCase(tokens.get(1))) {
             if (CONFIG_DIR.equalsIgnoreCase(tokens.get(2))) {
                 String dir = serverInfo.getDir();
-                response = "*2\r\n" + buildResponse(CONFIG_DIR) + buildResponse(dir);
+                response = ProtocolParser.buildRespArray(CONFIG_DIR,dir);
             } else if (CONFIG_DBFILENAME.equalsIgnoreCase(tokens.get(2))) {
                 String dbfilename = serverInfo.getDbfilename();
-                response = "*2\r\n" + buildResponse(CONFIG_DBFILENAME) + buildResponse(dbfilename);
+                response = ProtocolParser.buildRespArray(CONFIG_DBFILENAME,dbfilename);
             }
         } else {
             response = "$-1\r\n";
@@ -200,7 +248,7 @@ public class CommandHandle extends Thread {
         return response;
     }
 
-    private String setCommand(List<String> tokens, String line) {
+    private String setCommand(List<String> tokens) {
         String response;
         long expiry = Long.MAX_VALUE;
         if (tokens.size() > 3 && "px".equalsIgnoreCase(tokens.get(3))) {
@@ -214,7 +262,7 @@ public class CommandHandle extends Thread {
             Set<OutputStream> replicas = serverInfo.getReplicas();
             replicas.forEach(replicaOutputStream -> {
                 try {
-                    replicaOutputStream.write(line.getBytes(StandardCharsets.UTF_8));
+                    replicaOutputStream.write(ProtocolParser.buildArray(tokens).getBytes(StandardCharsets.UTF_8));
                     System.out.println("[" + serverInfo.getRole()+"]"+"data sent to replicas");
                 } catch (SocketException e) {
                     System.out.println("[" + serverInfo.getRole()+"]"+"Error sending data to replica: " + e.getMessage());
@@ -237,7 +285,7 @@ public class CommandHandle extends Thread {
         ExpiryValue expiryValue = setDict.get(tokens.get(1));
         if (expiryValue != null && expiryValue.expiry > System.currentTimeMillis()) {
             String message = expiryValue.value;
-            response = buildResponse(message);
+            response = ProtocolParser.buildSimpleString(message);
         } else {
             setDict.remove(tokens.get(1));
             response = "$-1\r\n";
@@ -245,25 +293,6 @@ public class CommandHandle extends Thread {
         return response;
     }
 
-
-    public static String buildResponse(String message) {
-        String response = null;
-        if (null != message) {
-            response = String.format("$%d\r\n%s\r\n", message.length(), message);
-        }
-        return response;
-    }
-
-    // # REPLCONF listening-port <PORT>
-    //*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n
-    public static String buildRespArray(String... messages) {
-        String response = "*" + messages.length + "\r\n";
-        for (String msg : messages) {
-            response += buildResponse(msg);
-        }
-        // response = String.format("$%d\r\n%s\r\n", message.length(), message);
-        return response;
-    }
 
     List<String> parse(String param) {
         List<String> args = new ArrayList<>();
