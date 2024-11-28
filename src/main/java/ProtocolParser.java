@@ -2,9 +2,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Author: tongqianwen
@@ -25,12 +23,11 @@ public class ProtocolParser {
                 case '$': {
                     return parseBulkString(inputStream);
                 }
-                case '*':{
+                case '*': {
                     return parseArray(inputStream);
                 }
-                default:{
-
-                    System.out.println("整不会了"+b);
+                default: {
+                    System.out.println("整不会了" + Integer.toHexString(b));
                 }
             }
         } catch (IOException e) {
@@ -42,14 +39,14 @@ public class ProtocolParser {
     // *<number-of-elements>\r\n<element-1>...<element-n>
     private static List<String> parseArray(DataInputStream inputStream) throws IOException {
         int size = Integer.parseInt(inputStream.readLine());
-        System.out.println("array size: "+size);
+        System.out.println("array size: " + size);
         List<String> array = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             Object obj = parseInput(inputStream);
-            if(obj instanceof String){
+            if (obj instanceof String) {
                 array.add((String) obj);
-            }else {
-                throw new RuntimeException("unhandled type "+ obj.getClass());
+            } else {
+                throw new RuntimeException("unhandled type " + obj);
             }
         }
         return array;
@@ -60,17 +57,18 @@ public class ProtocolParser {
         String line = inputStream.readLine();
         return line;
     }
+
     // $<length>\r\n<data>\r\n
     private static String parseBulkString(DataInputStream inputStream) throws IOException {
 
         int length = Integer.parseInt(inputStream.readLine());
-        System.out.println("bulk string length: "+length);
+        System.out.println("bulk string length: " + length);
 //        return "";
 
         byte[] array = new byte[length];
         int read = inputStream.read(array);
-        System.out.println("read array returns:" +read);
-        return new String(array,0,length);
+        System.out.println("read array returns:" + read);
+        return new String(array, 0, length);
     }
 
     private static int parseDigits(DataInputStream inputStream) throws IOException {
@@ -82,6 +80,7 @@ public class ProtocolParser {
         inputStream.readByte(); // skip '\n' after '\r'
         return Integer.parseInt(digits.toString());
     }
+
     public static void main(String[] args) throws IOException {
         char plus = '+';
         System.out.println(Integer.toHexString(plus));
@@ -116,9 +115,8 @@ public class ProtocolParser {
     }
 
     public static String buildSimpleString(String token) {
-        return  String.format("$%d\r\n%s\r\n", token.length(), token);
+        return String.format("$%d\r\n%s\r\n", token.length(), token);
     }
-
 
 
     public static String buildResponse(String message) {
