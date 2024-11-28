@@ -10,12 +10,14 @@ import java.util.Set;
  */
 public class ServerInfo {
     public static final ServerInfo singleton = new ServerInfo();
-    private ServerInfo(){
+
+    private ServerInfo() {
     }
 
-    public static ServerInfo getInstance(){
+    public static ServerInfo getInstance() {
         return singleton;
     }
+
     private String role = "master";
     private int port = 6379;
     private String dir;
@@ -23,7 +25,11 @@ public class ServerInfo {
     private String masterHost;
     private String masterPort;
     private String masterReplid;
-    private Long masterReplOffset;
+    private Long masterReplOffset = 0L;
+
+    public void addOffset(long offset) {
+        this.masterReplOffset += offset;
+    }
 
     private volatile Set<OutputStream> replicas = new HashSet<>();
 

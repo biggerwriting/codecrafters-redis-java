@@ -1,4 +1,5 @@
-import java.io.ByteArrayInputStream;
+import domain.ServerInfo;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,18 +16,21 @@ public class ProtocolParser {
     }
 
 
-    public static Object parseInput(DataInputStream inputStream) {
+    public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
         try {
             char b = (char) inputStream.readByte();
+            if (serverInfo != null) {
+                serverInfo.addOffset(1);
+            }
             switch (b) {
                 case '+': {
-                    return parseSimpleString(inputStream);
+                    return parseSimpleString(inputStream, serverInfo);
                 }
                 case '$': {
-                    return parseBulkString(inputStream);
+                    return parseBulkString(inputStream, serverInfo);
                 }
                 case '*': {
-                    return parseArray(inputStream);
+                    return parseArray(inputStream, serverInfo);
                 }
                 default: {
                     System.out.println("整不会了" + Integer.toHexString(b));
@@ -39,12 +43,15 @@ public class ProtocolParser {
     }
 
     // *<number-of-elements>\r\n<element-1>...<element-n>
-    private static List<String> parseArray(DataInputStream inputStream) throws IOException {
-        int size = Integer.parseInt(inputStream.readLine());
+    private static List<String> parseArray(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
+        String lengthStr = inputStream.readLine();
+        int size = Integer.parseInt(lengthStr);
+        serverInfo.addOffset(lengthStr.length() + 2);
+
         System.out.println("array size: " + size);
         List<String> array = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            Object obj = parseInput(inputStream);
+            Object obj = parseInput(inputStream, serverInfo);
             if (obj instanceof String) {
                 array.add((String) obj);
             } else {
@@ -56,22 +63,28 @@ public class ProtocolParser {
     }
 
     // +OK\r\n
-    private static String parseSimpleString(DataInputStream inputStream) throws IOException {
+    private static String parseSimpleString(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
         String line = inputStream.readLine();
+        if (serverInfo != null) {
+            serverInfo.addOffset(line.length() + 2);
+        }
         log("simple string【", line, "】");
         return line;
     }
 
     // $<length>\r\n<data>\r\n
-    private static String parseBulkString(DataInputStream inputStream) throws IOException {
-        int length = Integer.parseInt(inputStream.readLine());
+    private static String parseBulkString(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
+        String lengthStr = inputStream.readLine();
+        int length = Integer.parseInt(lengthStr);
         System.out.println("bulk string length: " + length);
         byte[] array = new byte[length];
         inputStream.read(array);
-//        System.out.println("read array returns:" + read);
         String s = new String(array, 0, length);
         log("bulk string【", s, "】");
         inputStream.readLine();
+        if (serverInfo != null) {
+            serverInfo.addOffset(lengthStr.length() + 2 + length + 2);
+        }
         return s;
     }
 
@@ -85,29 +98,6 @@ public class ProtocolParser {
         return Integer.parseInt(digits.toString());
     }
 
-    public static void main(String[] args) throws IOException {
-        char plus = '+';
-        // System.out.println(Integer.toHexString(plus));// 2b
-
-        plus = '\r';
-        // System.out.println(Integer.toHexString(plus));//d
-        plus = '\n';
-        // System.out.println(Integer.toHexString(plus));//a
-        String ipStr = "+FULLRESYNC 71dc 0\r\n" +
-                "$8\r\n" +
-                "REDIS0011\r\n";
-        DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-//        String s = (String) parseInput(dataInputStream);
-//        System.out.println("1. parseIput: " + s);
-//
-//        s = (String) parseInput(dataInputStream);
-//        System.out.println("2. parseIput: " + s);
-
-        ipStr = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
-        dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-        System.out.println("找错误：" + parseInput(dataInputStream));
-
-    }
 
     public static String buildArray(List<String> array) {
         StringBuilder sb = new StringBuilder();
@@ -152,8 +142,8 @@ public class ProtocolParser {
             byte[] array = new byte[length];
             inputStream.read(array);
             // todo 这个array 没人用
-        }else {
-            throw new RuntimeException("未识别的文件字符："+ Integer.toHexString(b));
+        } else {
+            throw new RuntimeException("未识别的文件字符：" + Integer.toHexString(b));
         }
     }
 }

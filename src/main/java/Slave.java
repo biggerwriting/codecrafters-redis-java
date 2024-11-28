@@ -1,6 +1,5 @@
 import domain.ServerInfo;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,6 +15,8 @@ import static demo.Utils.readBuffLine;
  * @Date: 2024/11/26
  */
 public class Slave {
+    private static ServerInfo serverInfo = ServerInfo.getInstance();
+
     public static void initiateSlaveConnection(ServerInfo serverInfo) {
 
         try (Socket socket = new Socket(serverInfo.getMasterHost(), Integer.parseInt(serverInfo.getMasterPort()));
@@ -38,7 +39,7 @@ public class Slave {
             // PSYNC ? -1
             message = ProtocolParser.buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
-            System.out.println("[" + serverInfo.getRole() + "]" + "PSYNC ? -1 得到服务端输出：【" + ProtocolParser.parseInput(inputStream) + "】");
+            System.out.println("[" + serverInfo.getRole() + "]" + "PSYNC ? -1 得到服务端输出：【" + ProtocolParser.parseInput(inputStream, null) + "】");
             ProtocolParser.readFile(inputStream);
 
             // 作为redis服务器，处理cli请求
@@ -46,7 +47,7 @@ public class Slave {
 
             // todo 实际服务器还有话说, 如何知道他说完了呢
             Object readMsg;
-            while (null != (readMsg = ProtocolParser.parseInput(inputStream))) {
+            while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
                 if (readMsg instanceof String) {
                     log(serverInfo, "服务端还有话说 string【", (String) readMsg, "】");
                 } else if (readMsg instanceof List) {
@@ -58,7 +59,7 @@ public class Slave {
                     String response = commandHandle.processCommand(array);
 
                     //The master will then send REPLCONF GETACK * to your replica. It'll expect to receive REPLCONF ACK 0 as a reply.
-                    if ("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n".equalsIgnoreCase(response)) {
+                    if (response != null && response.contains("REPLCONF")) {
                         outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     }
                 } else {
@@ -69,29 +70,6 @@ public class Slave {
         } catch (IOException e) {
             System.out.println("[" + serverInfo.getRole() + "]" + "IOException: " + e.getMessage());
             e.printStackTrace();
-        }
-    }
-
-    public static void main(String[] args) throws IOException {
-        String ipStr="$8\r\nREDIS001*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
-        DataInputStream inputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-
-        Object readMsg;
-        while (null != (readMsg = ProtocolParser.parseInput(inputStream))) {
-            if (readMsg instanceof String) {
-                log( "服务端还有话说 string【", (String) readMsg, "】");
-            } else if (readMsg instanceof List) {
-                List<String> array = (List<String>) readMsg;
-                log( "服务端还有话说 array【", array.toString(), "】");
-
-                // 处理set命令
-                CommandHandle commandHandle = new CommandHandle(null, ServerInfo.getInstance());
-                String response = commandHandle.processCommand(array);
-
-                System.out.println("response = "+response);
-            } else {
-                log( "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
-            }
         }
     }
 }
