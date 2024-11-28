@@ -71,6 +71,7 @@ public class ProtocolParser {
 //        System.out.println("read array returns:" + read);
         String s = new String(array, 0, length);
         log("bulk string【", s, "】");
+        inputStream.readLine();
         return s;
     }
 
