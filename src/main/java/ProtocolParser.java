@@ -37,7 +37,7 @@ public class ProtocolParser {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("error: "+e.getMessage());
         }
         return null;
     }
@@ -58,7 +58,7 @@ public class ProtocolParser {
                 throw new RuntimeException("unhandled type " + obj);
             }
         }
-        log("array【", array.toString(), "】");
+        //log("array【", array.toString(), "】");
         return array;
     }
 
@@ -68,7 +68,7 @@ public class ProtocolParser {
         if (serverInfo != null) {
             serverInfo.addOffset(line.length() + 2);
         }
-        log("simple string【", line, "】");
+        //log("simple string【", line, "】");
         return line;
     }
 
@@ -76,11 +76,11 @@ public class ProtocolParser {
     private static String parseBulkString(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
         String lengthStr = inputStream.readLine();
         int length = Integer.parseInt(lengthStr);
-        System.out.println("bulk string length: " + length);
+        //System.out.println("bulk string length: " + length);
         byte[] array = new byte[length];
         inputStream.read(array);
         String s = new String(array, 0, length);
-        log("bulk string【", s, "】");
+        //log("bulk string【", s, "】");
         inputStream.readLine();
         if (serverInfo != null) {
             serverInfo.addOffset(lengthStr.length() + 2 + length + 2);

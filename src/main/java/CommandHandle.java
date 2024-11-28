@@ -39,7 +39,7 @@ public class CommandHandle extends Thread {
         try {
             handle(socket);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("End CommandHandle with exp: "+e.getMessage());;
         }
     }
 
@@ -56,7 +56,6 @@ public class CommandHandle extends Thread {
                     response = processCommand(Collections.singletonList((String) readMsg));
                 } else if (readMsg instanceof List) {
                     List<String> array = (List<String>) readMsg;
-                    log(serverInfo, "得到客户端请求 list：【", array.toString(), "】");
                     response = processCommand(array);
                 } else {
                     log(serverInfo, "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
@@ -221,7 +220,7 @@ public class CommandHandle extends Thread {
                 }
             });
         }
-        System.out.println("[" + serverInfo.getRole() + "]" + "setDict finished, size = " + setDict.size());
+        System.out.println("[" + serverInfo.getRole() + "]" + "setDict finished, 目前的slave服务数量 size = " + setDict.size());
         response = "+OK\r\n";
         return response;
     }
