@@ -1,5 +1,6 @@
 import domain.ServerInfo;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -38,6 +39,7 @@ public class Slave {
             message = ProtocolParser.buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
             System.out.println("[" + serverInfo.getRole() + "]" + "PSYNC ? -1 得到服务端输出：【" + ProtocolParser.parseInput(inputStream) + "】");
+            ProtocolParser.readFile(inputStream);
 
             // 作为redis服务器，处理cli请求
             new Connection(serverInfo).start();
@@ -74,8 +76,26 @@ public class Slave {
         }
     }
 
-//    private static boolean replicaMaster(DataInputStream inputStream) {
-//        String message = readBuffLine(inputStream);
-//        if ()
-//    }
+    public static void main(String[] args) throws IOException {
+        String ipStr="$8\r\nREDIS001*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
+        DataInputStream inputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
+
+        Object readMsg;
+        while (null != (readMsg = ProtocolParser.parseInput(inputStream))) {
+            if (readMsg instanceof String) {
+                log( "服务端还有话说 string【", (String) readMsg, "】");
+            } else if (readMsg instanceof List) {
+                List<String> array = (List<String>) readMsg;
+                log( "服务端还有话说 array【", array.toString(), "】");
+
+                // 处理set命令
+                CommandHandle commandHandle = new CommandHandle(null, ServerInfo.getInstance());
+                String response = commandHandle.processCommand(array);
+
+                System.out.println("response = "+response);
+            } else {
+                log( "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
+            }
+        }
+    }
 }

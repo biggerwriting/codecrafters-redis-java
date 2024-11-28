@@ -51,14 +51,14 @@ public class ProtocolParser {
                 throw new RuntimeException("unhandled type " + obj);
             }
         }
-        log("array【",array.toString(),"】");
+        log("array【", array.toString(), "】");
         return array;
     }
 
     // +OK\r\n
     private static String parseSimpleString(DataInputStream inputStream) throws IOException {
         String line = inputStream.readLine();
-        log("simple string【",line,"】");
+        log("simple string【", line, "】");
         return line;
     }
 
@@ -70,8 +70,7 @@ public class ProtocolParser {
         inputStream.read(array);
 //        System.out.println("read array returns:" + read);
         String s = new String(array, 0, length);
-        log("bulk string【",s,"】");
-        inputStream.readLine();
+        log("bulk string【", s, "】");
         return s;
     }
 
@@ -103,9 +102,9 @@ public class ProtocolParser {
 //        s = (String) parseInput(dataInputStream);
 //        System.out.println("2. parseIput: " + s);
 
-        ipStr="*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
+        ipStr = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
         dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-        System.out.println("找错误："+parseInput(dataInputStream));
+        System.out.println("找错误：" + parseInput(dataInputStream));
 
     }
 
@@ -143,4 +142,17 @@ public class ProtocolParser {
         return response;
     }
 
+    public static void readFile(DataInputStream inputStream) throws IOException {
+        // $8\r\nREDIS001
+        char b = (char) inputStream.readByte();
+        if ('$' == b) {
+            int length = Integer.parseInt(inputStream.readLine());
+            System.out.println("read file, size: " + length);
+            byte[] array = new byte[length];
+            inputStream.read(array);
+            // todo 这个array 没人用
+        }else {
+            throw new RuntimeException("未识别的文件字符："+ Integer.toHexString(b));
+        }
+    }
 }
