@@ -128,6 +128,10 @@ public class CommandHandle extends Thread {
                 response = "+FULLRESYNC " + serverInfo.getMasterReplid()+  " 0\r\n";
                 break;
             }
+            case "WAIT":{
+                response = ":0\r\n";
+                break;
+            }
             default: {
                 response = "$-1\r\n";
                 break;
