@@ -1,11 +1,13 @@
 import domain.ServerInfo;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static demo.Utils.log;
+import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
@@ -40,6 +42,7 @@ public class ProtocolParser {
                 }
                 default: {
                     System.out.println("整不会了" + Integer.toHexString(b));
+                    log("遇到了异常的输入，把剩下的都打印出来：【" , readBuffLine(inputStream) , "】");
                 }
             }
         } catch (IOException e) {
@@ -52,8 +55,9 @@ public class ProtocolParser {
     private static List<String> parseArray(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
         String lengthStr = inputStream.readLine();
         int size = Integer.parseInt(lengthStr);
-        serverInfo.addOffset(lengthStr.length() + 2);
-
+        if(serverInfo!=null) {
+            serverInfo.addOffset(lengthStr.length() + 2);
+        }
         System.out.println("array size: " + size);
         List<String> array = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
@@ -154,5 +158,32 @@ public class ProtocolParser {
         } else {
             throw new RuntimeException("未识别的文件字符：" + Integer.toHexString(b));
         }
+    }
+
+    // "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n"
+
+    public static void main(String[] args) throws IOException {
+        char plus = '+';
+        // System.out.println(Integer.toHexString(plus));// 2b
+
+        plus = '\r';
+        // System.out.println(Integer.toHexString(plus));//d
+        plus = '\n';
+        // System.out.println(Integer.toHexString(plus));//a
+        String ipStr = "+FULLRESYNC 71dc 0\r\n" +
+                "$8\r\n" +
+                "REDIS0011\r\n";
+        DataInputStream dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
+//        String s = (String) parseInput(dataInputStream);
+//        System.out.println("1. parseIput: " + s);
+//
+//        s = (String) parseInput(dataInputStream);
+//        System.out.println("2. parseIput: " + s);
+
+        ipStr = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
+        ipStr =  "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n99\r\n";
+        dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
+        System.out.println("找错误：" + parseInput(dataInputStream,null));
+
     }
 }

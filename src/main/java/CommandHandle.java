@@ -248,7 +248,7 @@ public class CommandHandle extends Thread {
                     CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
                 }
             } catch (Exception e) {
-                System.out.println("2 time out:" + e.getMessage());
+                System.out.println("等待slave wait 响应超时:" + e.getMessage());
             }
         }
         // Get count of acknowledged replicas and reset counter
@@ -273,6 +273,7 @@ public class CommandHandle extends Thread {
         }
     }
 
+
     public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
         long timeOutMillis = 500L;
         List<Integer> list = Arrays.asList(1, 2, 3, 4);
@@ -296,10 +297,11 @@ public class CommandHandle extends Thread {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-        });//                .get(timeOutMillis, TimeUnit.MILLISECONDS)
+        });
+        //                .get(timeOutMillis, TimeUnit.MILLISECONDS)
 //        try {
 //
-//            CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
+            CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
 //        } catch (TimeoutException e) {
 //            System.out.println("time out:" + e.getMessage());
 //        }
@@ -328,6 +330,7 @@ public class CommandHandle extends Thread {
         System.out.println("main end");
         Thread.sleep(4000);
     }
+
 
     private static String getCommand(List<String> tokens) {
         String response;
