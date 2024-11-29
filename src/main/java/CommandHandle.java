@@ -244,13 +244,6 @@ public class CommandHandle extends Thread {
             } catch (Exception e) {
                 System.out.println("2 time out:" + e.getMessage());
             }
-            try {
-                // Wait for all futures to complete
-                CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-
         }
         return String.format(":%d\r\n", serverInfo.getReplicas().size());
     }
