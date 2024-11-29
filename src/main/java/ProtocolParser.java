@@ -16,6 +16,12 @@ public class ProtocolParser {
     }
 
 
+    /**
+     *
+     * @param inputStream
+     * @param serverInfo 记录从master 传过来多少命令
+     * @return
+     */
     public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
         try {
             char b = (char) inputStream.readByte();
