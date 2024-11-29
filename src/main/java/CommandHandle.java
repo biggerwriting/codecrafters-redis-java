@@ -31,6 +31,7 @@ public class CommandHandle extends Thread {
 
 
     private final AtomicInteger acknowledgedReplicaCount = new AtomicInteger();
+    private final AtomicInteger sendReplicaCount = new AtomicInteger();
     private final Socket socket;
     private final ServerInfo serverInfo;
 
@@ -258,14 +259,16 @@ public class CommandHandle extends Thread {
     }
     private void getAcknowledgement(Socket socket) {
         try {
+            int sendCount = sendReplicaCount.incrementAndGet();
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
             OutputStream outputStream = socket.getOutputStream();
+
             String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
             outputStream.write(ackCommand.getBytes());
-            log("Ack command sent:【",ackCommand,"】");
+            log(sendCount+" Ack command sent:【",ackCommand,"】");
 
-            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
             String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
-            log("Ack esponse received:【",ackResponse,"】");
+            log(sendCount+" Ack esponse received:【",ackResponse,"】");
             acknowledgedReplicaCount.incrementAndGet();
 
         } catch (IOException e) {

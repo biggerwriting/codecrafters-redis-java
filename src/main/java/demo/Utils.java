@@ -36,6 +36,7 @@ public class Utils {
     public static void log(ServerInfo serverInfo, String... msg) {
         StringBuffer sb = new StringBuffer();
         sb.append("[" + serverInfo.getRole() + "]");
+        sb.append("[" + Thread.currentThread().getName() + "]");
         for (int i = 0; i < msg.length; i++) {
             // sb.append(lists[i].replaceAll("\n","\\\\n").replaceAll("\r","\\\\r"));
             sb.append(msg[i].replace("\n", "\\n").replace("\r", "\\r"));
