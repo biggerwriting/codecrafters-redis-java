@@ -6,8 +6,9 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static demo.Utils.log;
 
@@ -39,7 +40,8 @@ public class CommandHandle extends Thread {
         try {
             handle(socket);
         } catch (IOException e) {
-            System.out.println("End CommandHandle with exp: "+e.getMessage());;
+            System.out.println("End CommandHandle with exp: " + e.getMessage());
+            ;
         }
     }
 
@@ -135,7 +137,7 @@ public class CommandHandle extends Thread {
                 break;
             }
             case "WAIT": {
-                response = String.format(":%d\r\n", serverInfo.getReplicas().size());
+                response = waitCommand(tokens);
                 break;
             }
             default: {
@@ -216,13 +218,107 @@ public class CommandHandle extends Thread {
                 } catch (Exception e) {
                     System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
-
                 }
             });
         }
         System.out.println("[" + serverInfo.getRole() + "]" + "setDict finished, 目前的slave服务数量 size = " + setDict.size());
         response = "+OK\r\n";
         return response;
+    }
+
+    private String waitCommand(List<String> tokens) {
+        if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
+                && !serverInfo.getReplicas().isEmpty()) {
+
+            long timeOutMillis = Long.parseLong(tokens.get(2));
+
+            Set<OutputStream> replicas = serverInfo.getReplicas();
+            // Map each replica to a CompletableFuture representing async task
+            Stream<CompletableFuture<Void>> futures = replicas.stream()
+                    .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica)));
+
+            try {
+                if (timeOutMillis > 0) {
+                    CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
+                }
+            } catch (Exception e) {
+                System.out.println("2 time out:" + e.getMessage());
+            }
+            try {
+                // Wait for all futures to complete
+                CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+        return String.format(":%d\r\n", serverInfo.getReplicas().size());
+    }
+
+    private void getAcknowledgement(OutputStream outputStream) {
+        try {
+            String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
+            outputStream.write(ackCommand.getBytes());
+            System.out.printf("Ack command sent: %s\n", ackCommand);
+        } catch (IOException e) {
+            System.out.printf("Acknowledgement failed: %s\n", e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
+        long timeOutMillis = 500L;
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+        CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
+            try {
+                int num = 1000;
+                System.out.println(Thread.currentThread().getName() + " sleep start " + num);
+                Thread.sleep(num);
+                System.out.println(Thread.currentThread().getName() + " sleep end   " + num);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });//                .get(timeOutMillis, TimeUnit.MILLISECONDS)
+
+        CompletableFuture<Void> voidCompletableFuture1 = CompletableFuture.runAsync(() -> {
+            try {
+                int num = 200;
+                System.out.println(Thread.currentThread().getName() + " sleep start " + num);
+                Thread.sleep(num);
+                System.out.println(Thread.currentThread().getName() + " sleep end   " + num);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });//                .get(timeOutMillis, TimeUnit.MILLISECONDS)
+//        try {
+//
+//            CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
+//        } catch (TimeoutException e) {
+//            System.out.println("time out:" + e.getMessage());
+//        }
+        Stream<CompletableFuture<Void>> completableFutureStream = list.stream().map(index -> CompletableFuture.runAsync(() -> {
+            try {
+                int num = index * 200;
+                System.out.println(Thread.currentThread().getName() + " B sleep start " + num);
+                Thread.sleep(num);
+                System.out.println(Thread.currentThread().getName() + " B sleep end   " + num);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }));
+
+//        CompletableFuture[] array = completableFutureStream.toArray(CompletableFuture[]::new);
+        try {
+
+            CompletableFuture.allOf(completableFutureStream.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
+
+        } catch (TimeoutException e) {
+            System.out.println("2 time out:" + e.getMessage());
+        }
+        //completeOnTimeout(null,timeOutMillis, TimeUnit.MILLISECONDS)).collect(Collectors.toList());
+
+
+        System.out.println("main end");
+        Thread.sleep(4000);
     }
 
     private static String getCommand(List<String> tokens) {
