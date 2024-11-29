@@ -19,9 +19,8 @@ public class ProtocolParser {
 
 
     /**
-     *
      * @param inputStream
-     * @param serverInfo 记录从master 传过来多少命令
+     * @param serverInfo  记录从master 传过来多少命令
      * @return
      */
     public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
@@ -42,21 +41,20 @@ public class ProtocolParser {
                 }
                 default: {
                     System.out.println("整不会了" + Integer.toHexString(b));
-                    log("遇到了异常的输入，把剩下的都打印出来：【" , readBuffLine(inputStream) , "】");
+                    log("遇到了异常的输入，把剩下的都打印出来：【", readBuffLine(inputStream), "】");
                 }
             }
         } catch (IOException e) {
-            System.out.println("error: "+e.getMessage());
+            System.out.println("error: " + e.getMessage());
         }
         return null;
     }
 
     // *<number-of-elements>\r\n<element-1>...<element-n>
     private static List<String> parseArray(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
-        String lengthStr = inputStream.readLine();
-        int size = Integer.parseInt(lengthStr);
-        if(serverInfo!=null) {
-            serverInfo.addOffset(lengthStr.length() + 2);
+        int size = parseDigits(inputStream);
+        if (serverInfo != null) {
+            serverInfo.addOffset(String.valueOf(size).length() + 2);
         }
         System.out.println("array size: " + size);
         List<String> array = new ArrayList<>(size);
@@ -74,26 +72,33 @@ public class ProtocolParser {
 
     // +OK\r\n
     private static String parseSimpleString(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
-        String line = inputStream.readLine();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (char ch = (char) inputStream.readByte(); ch != '\r'; ch = (char) inputStream.readByte()) {
+            stringBuilder.append(ch);
+        }
+
+        // Skip `\n`
+        inputStream.readByte();
+
+        String line = stringBuilder.toString();
         if (serverInfo != null) {
             serverInfo.addOffset(line.length() + 2);
         }
-        //log("simple string【", line, "】");
         return line;
     }
 
     // $<length>\r\n<data>\r\n
     private static String parseBulkString(DataInputStream inputStream, ServerInfo serverInfo) throws IOException {
-        String lengthStr = inputStream.readLine();
-        int length = Integer.parseInt(lengthStr);
+        int length = parseDigits(inputStream);
         //System.out.println("bulk string length: " + length);
         byte[] array = new byte[length];
         inputStream.read(array);
         String s = new String(array, 0, length);
-        //log("bulk string【", s, "】");
-        inputStream.readLine();
+        // Skip `\r\n`
+        inputStream.readByte();
+        inputStream.readByte();
         if (serverInfo != null) {
-            serverInfo.addOffset(lengthStr.length() + 2 + length + 2);
+            serverInfo.addOffset(String.valueOf(length).length() + 2 + length + 2);
         }
         return s;
     }
@@ -123,10 +128,11 @@ public class ProtocolParser {
         return String.format("$%d\r\n%s\r\n", token.length(), token);
     }
 
-    public static String buildInteger(int num){
+    public static String buildInteger(int num) {
 
         return String.format(":%d\r\n", num);
     }
+
     public static String buildResponse(String message) {
         String response = null;
         if (null != message) {
@@ -181,9 +187,9 @@ public class ProtocolParser {
 //        System.out.println("2. parseIput: " + s);
 
         ipStr = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
-        ipStr =  "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n99\r\n";
+        ipStr = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$2\r\n99\r\n";
         dataInputStream = new DataInputStream(new ByteArrayInputStream(ipStr.getBytes()));
-        System.out.println("找错误：" + parseInput(dataInputStream,null));
+        System.out.println("找错误：" + parseInput(dataInputStream, null));
 
     }
 }
