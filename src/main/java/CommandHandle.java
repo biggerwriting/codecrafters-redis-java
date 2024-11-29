@@ -7,10 +7,12 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static demo.Utils.log;
+import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
@@ -68,7 +70,8 @@ public class CommandHandle extends Thread {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     // 建立从连接
                     if (response.startsWith("+FULLRESYNC")) {
-                        serverInfo.getReplicas().add(outputStream);
+                        serverInfo.getReplicas().add(socket);
+
                         sendEmpteyRDBFile(outputStream);
                     }
                 }
@@ -206,14 +209,15 @@ public class CommandHandle extends Thread {
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
             System.out.println("[" + serverInfo.getRole() + "]" + "Sending data to replicas -> " + tokens);
-            Set<OutputStream> replicas = serverInfo.getReplicas();
-            replicas.forEach(replicaOutputStream -> {
+            Set<Socket> replicas = serverInfo.getReplicas();
+            replicas.forEach(socket -> {
                 try {
+                    OutputStream replicaOutputStream = socket.getOutputStream();
                     replicaOutputStream.write(ProtocolParser.buildArray(tokens).getBytes(StandardCharsets.UTF_8));
                     System.out.println("[" + serverInfo.getRole() + "]" + "data sent to replicas");
                 } catch (SocketException e) {
                     System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
-                    replicas.remove(replicaOutputStream);
+                    replicas.remove(socket);
                     System.out.println("[" + serverInfo.getRole() + "]" + "目前的slave服务数量：" + replicas.size());
                 } catch (Exception e) {
                     System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
@@ -232,7 +236,7 @@ public class CommandHandle extends Thread {
 
             long timeOutMillis = Long.parseLong(tokens.get(2));
 
-            Set<OutputStream> replicas = serverInfo.getReplicas();
+            Set<Socket> replicas = serverInfo.getReplicas();
             // Map each replica to a CompletableFuture representing async task
             Stream<CompletableFuture<Void>> futures = replicas.stream()
                     .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica)));
@@ -245,14 +249,26 @@ public class CommandHandle extends Thread {
                 System.out.println("2 time out:" + e.getMessage());
             }
         }
-        return String.format(":%d\r\n", serverInfo.getReplicas().size());
+        // Get count of acknowledged replicas and reset counter
+        int ackCount = acknowledgedReplicaCount.intValue();
+        acknowledgedReplicaCount.set(0);
+        return String.format(":%d\r\n", ackCount);
     }
 
-    private void getAcknowledgement(OutputStream outputStream) {
+    private final AtomicInteger acknowledgedReplicaCount = new AtomicInteger();
+    private void getAcknowledgement(Socket socket) {
         try {
+            OutputStream outputStream = socket.getOutputStream();
             String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
             outputStream.write(ackCommand.getBytes());
             System.out.printf("Ack command sent: %s\n", ackCommand);
+
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+            String ackResponse = readBuffLine(inputStream);
+            System.out.printf("Ack response received: %s\n", ackResponse);
+
+            acknowledgedReplicaCount.incrementAndGet();
+
         } catch (IOException e) {
             System.out.printf("Acknowledgement failed: %s\n", e.getMessage());
         }

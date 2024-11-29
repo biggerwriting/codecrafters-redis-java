@@ -1,6 +1,7 @@
 package domain;
 
 import java.io.OutputStream;
+import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,7 +28,7 @@ public class ServerInfo {
     private String masterReplid;
     private Long masterReplOffset = 0L;
     private Long slaveOffset = 0L;
-    private volatile Set<OutputStream> replicas = new HashSet<>();
+    private volatile Set<Socket> replicas = new HashSet<>();
 
     public void addOffset(long offset) {
         this.slaveOffset += offset;
@@ -105,11 +106,11 @@ public class ServerInfo {
         this.masterReplOffset = masterReplOffset;
     }
 
-    public Set<OutputStream> getReplicas() {
+    public Set<Socket> getReplicas() {
         return replicas;
     }
 
-    public void setReplicas(Set<OutputStream> replicas) {
+    public void setReplicas(Set<Socket> replicas) {
         this.replicas = replicas;
     }
 }
