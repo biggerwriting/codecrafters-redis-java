@@ -129,12 +129,17 @@ public class CommandHandle extends Thread {
             case "REPLCONF": {
                 // todo 这里传了端口号的，后续可能会用上？ REPLCONF listening-port <PORT>
                 response = "+OK\r\n";
-
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
                 if ("GETACK".equalsIgnoreCase(message)) {
                     response = ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getSlaveOffset() - 37));
                 }
+
+                // [REPLCONF, ACK, 31] -- 收到从服务器的ack 响应，但是为什么是在这？
+                if(tokens.size()==3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
+                    acknowledgedReplicaCount.incrementAndGet();
+                }
+
                 break;
             }
             case "PSYNC": {
