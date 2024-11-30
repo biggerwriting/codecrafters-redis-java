@@ -23,7 +23,7 @@ public class ProtocolParser {
      * @param serverInfo  记录从master 传过来多少命令
      * @return
      */
-    public static  Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
+    public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
         log("[parseInput] is called");
         try {
             char b = (char) inputStream.readByte();
@@ -47,9 +47,10 @@ public class ProtocolParser {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
             System.out.println("读取输入error: " + e.getMessage());
+            e.printStackTrace();
         }
+        log("ERROR: parseInput 读取失败");
         return null;
     }
 
@@ -66,6 +67,7 @@ public class ProtocolParser {
             if (obj instanceof String) {
                 array.add((String) obj);
             } else {
+                log("ERROR: unhandled type " + obj);
                 throw new RuntimeException("unhandled type " + obj);
             }
         }
