@@ -1,5 +1,6 @@
 import demo.ExpiryValue;
 import domain.ServerInfo;
+import domain.SlaveSocket;
 
 import java.io.*;
 import java.net.Socket;
@@ -57,13 +58,14 @@ public class CommandHandle extends Thread {
     }
 
     void handle(Socket socket) throws IOException {
-        try (OutputStream outputStream = socket.getOutputStream();
-             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-        ) {
+        try {
+            OutputStream outputStream = socket.getOutputStream();
+            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
             log("【socketId=" + socketId + "】", socketId + "- read begin " + System.currentTimeMillis());
             Object readMsg;
             String response = null;
-            log("[parseInput] call - handle");
+            log("【socketId=" + socketId + "】", "[parseInput] call - handle");
+            boolean flag = true;// 表示从服务器的连接不用继续监听了
             while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
                 log("【socketId=" + socketId + "】", "得到客户端请求【", readMsg.toString(), "】");
                 if (readMsg instanceof String) {
@@ -84,13 +86,15 @@ public class CommandHandle extends Thread {
                         serverInfo.getReplicas().add(socket);
 
                         sendEmpteyRDBFile(outputStream);
+//                        serverInfo.getSlaveSockets().add(new SlaveSocket(socket, socketId));
+//                        flag = false;
                     }
                 }
-                log("[parseInput] call - handle");
+                log("【socketId=" + socketId + "】", "[parseInput] call - handle loop");
             }
             log("【socketId=" + socketId + "】", "read end " + System.currentTimeMillis());
-        } catch (IOException e) {
-            log("【socketId=" + socketId + "】", "IOException: " + e.getMessage());
+        } catch (Exception e) {
+            log("【socketId=" + socketId + "】", "Exception: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -284,7 +288,8 @@ public class CommandHandle extends Thread {
 
     private void getAcknowledgement(Socket socket) {
         try (OutputStream outputStream = socket.getOutputStream();
-             InputStream inputStream = socket.getInputStream();
+             InputStream socketInputStream = new DataInputStream(socket.getInputStream());
+             DataInputStream inputStream = new DataInputStream(socketInputStream)
         ) {
             int sendCount = sendReplicaCount.incrementAndGet();
 //            synchronized (socket.getInputStream()){
@@ -293,7 +298,7 @@ public class CommandHandle extends Thread {
             log("【socketId=" + socketId + "】【sendCount=", sendCount + "】 Ack command sent:【", ackCommand, "】");
 
             log("[parseInput] call - getAcknowledgement");
-            String ackResponse = ProtocolParser.parseInput(new DataInputStream(inputStream), null).toString();
+            String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
             log("【socketId=" + socketId + "】【sendCount=", sendCount + "】 Ack esponse received:【", ackResponse, "】");
             acknowledgedReplicaCount.incrementAndGet();
 //            }

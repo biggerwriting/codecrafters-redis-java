@@ -3,6 +3,8 @@ import domain.ServerInfo;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +19,16 @@ public class ProtocolParser {
     private ProtocolParser() {
     }
 
+    public static Object parseInput(Socket socket, ServerInfo serverInfo){
+        synchronized (socket){
+            try (DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+            ) {
+                return parseInput(inputStream, serverInfo);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     /**
      * @param inputStream
@@ -24,10 +36,10 @@ public class ProtocolParser {
      * @return
      */
     public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
-        log("[parseInput] is called");
+        //log("[parseInput] is called");
         try {
             char b = (char) inputStream.readByte();
-            log("parseInput first byte:" + b);
+            // log("parseInput first byte:" + b);
             if (serverInfo != null) {
                 serverInfo.addOffset(1);
             }
@@ -116,7 +128,9 @@ public class ProtocolParser {
         }
 
         byte b = inputStream.readByte();// skip '\n' after '\r'
-        log("parseDigits [" + digits, "], end with ", Integer.toHexString(b));
+        if(digits.length()==0) {
+            log("ERROR parseDigits [" + digits, "] fail, end with ", Integer.toHexString(b));
+        }
         return Integer.parseInt(digits.toString());
     }
 

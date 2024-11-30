@@ -29,6 +29,15 @@ public class ServerInfo {
     private Long masterReplOffset = 0L;
     private Long slaveOffset = 0L;
     private volatile Set<Socket> replicas = new HashSet<>();
+//    private volatile Set<SlaveSocket> slaveSockets = new HashSet<>();
+//
+//    public Set<SlaveSocket> getSlaveSockets() {
+//        return slaveSockets;
+//    }
+//
+//    public void setSlaveSockets(Set<SlaveSocket> slaveSockets) {
+//        this.slaveSockets = slaveSockets;
+//    }
 
     public void addOffset(long offset) {
         this.slaveOffset += offset;
