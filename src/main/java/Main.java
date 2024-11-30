@@ -2,6 +2,8 @@ import domain.ServerInfo;
 
 import java.io.File;
 
+import static demo.Utils.log;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -13,11 +15,11 @@ public class Main {
         loadDatabase(serverInfo);
 
         if ("master".equals(serverInfo.getRole())) {
-            System.out.println("master set up");
+            log("master set up");
             Connection connection = new Connection(serverInfo);
             connection.initiateConnections();
         } else {
-            System.out.println("slave set up");
+            log("slave set up");
             Slave.initiateSlaveConnection(serverInfo);
         }
     }

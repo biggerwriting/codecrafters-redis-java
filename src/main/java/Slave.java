@@ -9,6 +9,7 @@ import java.util.List;
 
 import static demo.Utils.log;
 import static demo.Utils.readBuffLine;
+import static java.lang.System.exit;
 
 /**
  * @Author: tongqianwen
@@ -27,19 +28,19 @@ public class Slave {
             // slave 三次握手和 master建立连接
             // PING
             outputStream.write("*1\r\n$4\r\nPING\r\n".getBytes());
-            System.out.println("[" + serverInfo.getRole() + "]" + "PING 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            log("三次握手 PING 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             // REPLCONF listening-port <PORT>
             String message = ProtocolParser.buildRespArray("REPLCONF", "listening-port", String.valueOf(serverInfo.getPort()));
             outputStream.write(message.getBytes());
-            System.out.println("[" + serverInfo.getRole() + "]" + "REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            log("三次握手 REPLCONF listening-port 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             //REPLCONF capa psync2
             message = ProtocolParser.buildRespArray("REPLCONF", "capa", "psync2");
             outputStream.write(message.getBytes());
-            System.out.println("[" + serverInfo.getRole() + "]" + "REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStream) + "】");
+            log("三次握手 REPLCONF capa psync2 得到服务端输出：【" + readBuffLine(inputStream) + "】");
             // PSYNC ? -1
             message = ProtocolParser.buildRespArray("PSYNC", "?", "-1");
             outputStream.write(message.getBytes());
-            System.out.println("[" + serverInfo.getRole() + "]" + "PSYNC ? -1 得到服务端输出：【" + ProtocolParser.parseInput(inputStream, null) + "】");
+            log("三次握手 PSYNC ? -1 得到服务端输出：【" + ProtocolParser.parseInput(inputStream, null) + "】");
             ProtocolParser.readFile(inputStream);
 
             // 作为redis服务器，处理cli请求
@@ -66,10 +67,12 @@ public class Slave {
                     log(serverInfo, "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
                 }
             }
-            System.out.println("[" + serverInfo.getRole() + "]" + "ERROR 向服务器建立连接完毕, 服务器异常断开连接");
-        } catch (IOException e) {
-            System.out.println("[" + serverInfo.getRole() + "]" + "IOException: " + e.getMessage());
+            log( "ERROR 向服务器建立连接完毕, 服务器异常断开连接");
+            exit(1);
+        } catch (Exception e) {
+            log( "从服务器异常 Exception: " + e.getMessage());
             e.printStackTrace();
+            exit(2);
         }
     }
 }

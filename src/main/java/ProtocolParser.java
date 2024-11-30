@@ -26,6 +26,7 @@ public class ProtocolParser {
     public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
         try {
             char b = (char) inputStream.readByte();
+            log("parseInput first byte:" + b);
             if (serverInfo != null) {
                 serverInfo.addOffset(1);
             }
@@ -40,12 +41,13 @@ public class ProtocolParser {
                     return parseArray(inputStream, serverInfo);
                 }
                 default: {
-                    System.out.println("整不会了" + Integer.toHexString(b));
+                    log("parseInput first byte:" + Integer.toHexString(b) + "--unexcepted ");
                     log("遇到了异常的输入，把剩下的都打印出来：【", readBuffLine(inputStream), "】");
                 }
             }
         } catch (IOException e) {
-            System.out.println("error: " + e.getMessage());
+            e.printStackTrace();
+            System.out.println("读取输入error: " + e.getMessage());
         }
         return null;
     }
@@ -109,7 +111,9 @@ public class ProtocolParser {
         while ((c = (char) inputStream.readByte()) != '\r') {
             digits.append(c);
         }
-        inputStream.readByte(); // skip '\n' after '\r'
+
+        byte b = inputStream.readByte();// skip '\n' after '\r'
+        log("parseDigits 【" + digits, "】, end with ", Integer.toHexString(b));
         return Integer.parseInt(digits.toString());
     }
 

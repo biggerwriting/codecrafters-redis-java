@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static demo.Utils.log;
-import static demo.Utils.readBuffLine;
 
 /**
  * @Author: tongqianwen
@@ -34,7 +33,13 @@ public class CommandHandle extends Thread {
     private final AtomicInteger sendReplicaCount = new AtomicInteger();
     private final Socket socket;
     private final ServerInfo serverInfo;
+    private  Integer socketId;
 
+    public CommandHandle(Socket socket, ServerInfo serverInfo, Integer socketId) {
+        this.socket = socket;
+        this.serverInfo = serverInfo;
+        this.socketId = socketId;
+    }
     public CommandHandle(Socket socket, ServerInfo serverInfo) {
         this.socket = socket;
         this.serverInfo = serverInfo;
@@ -54,34 +59,35 @@ public class CommandHandle extends Thread {
         try (OutputStream outputStream = socket.getOutputStream();
              DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
-            System.out.println("[" + serverInfo.getRole() + "]" + "read begin " + System.currentTimeMillis());
+            log(socketId+ "- read begin " + System.currentTimeMillis());
             Object readMsg;
             String response = null;
             while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
-                log(serverInfo, "得到客户端请求 string：【", readMsg.toString(), "】");
+                log(socketId+ "- 得到客户端请求【", readMsg.toString(), "】");
                 if (readMsg instanceof String) {
                     response = processCommand(Collections.singletonList((String) readMsg));
                 } else if (readMsg instanceof List) {
                     List<String> array = (List<String>) readMsg;
                     response = processCommand(array);
                 } else {
-                    log(serverInfo, "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
+                    log(socketId+ "- 不知说了啥【", readMsg.toString(), "】");
                 }
-                log(serverInfo, "返回响应【", response, "】");
+                log(socketId+ "- 返回响应【", response, "】");
 
                 if (response != null) {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     // 建立从连接
                     if (response.startsWith("+FULLRESYNC")) {
+                        log("建立了主从连接，向从服务器发送空的RDB文件");
                         serverInfo.getReplicas().add(socket);
 
                         sendEmpteyRDBFile(outputStream);
                     }
                 }
             }
-            System.out.println("[" + serverInfo.getRole() + "]" + "read end " + System.currentTimeMillis());
+            log("read end " + System.currentTimeMillis());
         } catch (IOException e) {
-            System.out.println("[" + serverInfo.getRole() + "]" + "IOException: " + e.getMessage());
+            log("IOException: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -90,7 +96,7 @@ public class CommandHandle extends Thread {
     public String processCommand(List<String> tokens) throws IOException {
 
         String response = null;
-        System.out.println("[" + serverInfo.getRole() + "]" + "命令参数：" + tokens);
+        log("命令参数：" + tokens);
         // String command = tokens.get(0).toUpperCase();
 
         switch (tokens.get(0).toUpperCase()) {
@@ -136,7 +142,7 @@ public class CommandHandle extends Thread {
                 }
 
                 // [REPLCONF, ACK, 31] -- 收到从服务器的ack 响应，但是为什么是在这？
-                if(tokens.size()==3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
+                if (tokens.size() == 3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
                     acknowledgedReplicaCount.incrementAndGet();
                 }
 
@@ -216,52 +222,61 @@ public class CommandHandle extends Thread {
 
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-            System.out.println("[" + serverInfo.getRole() + "]" + "Sending data to replicas -> " + tokens);
+            log("Sending data to replicas -> " + tokens);
             Set<Socket> replicas = serverInfo.getReplicas();
             replicas.forEach(socket -> {
                 try {
                     OutputStream replicaOutputStream = socket.getOutputStream();
                     replicaOutputStream.write(ProtocolParser.buildArray(tokens).getBytes(StandardCharsets.UTF_8));
-                    System.out.println("[" + serverInfo.getRole() + "]" + "data sent to replicas");
+                    log("data sent to replicas");
                 } catch (SocketException e) {
-                    System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
+                    log("Error sending data to replica: " + e.getMessage());
                     replicas.remove(socket);
-                    System.out.println("[" + serverInfo.getRole() + "]" + "目前的slave服务数量：" + replicas.size());
+                    log("目前的slave服务数量：" + replicas.size());
                 } catch (Exception e) {
-                    System.out.println("[" + serverInfo.getRole() + "]" + "Error sending data to replica: " + e.getMessage());
+                    log("Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
+                    replicas.remove(socket);
+                    log("目前的slave服务数量：" + replicas.size());
                 }
             });
         }
-        System.out.println("[" + serverInfo.getRole() + "]" + "setDict finished, 目前的slave服务数量 size = " + setDict.size());
+        log("setDict finished, 目前的 dict 数量 size = " + setDict.size());
         response = "+OK\r\n";
         return response;
     }
 
     private String waitCommand(List<String> tokens) {
+        if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")) {
+            long timeOutMillis = Long.parseLong(tokens.get(2));
+            log("waitCommand timeOutMillis = " + timeOutMillis);
+        }
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-
             long timeOutMillis = Long.parseLong(tokens.get(2));
+            log("waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
             Set<Socket> replicas = serverInfo.getReplicas();
             // Map each replica to a CompletableFuture representing async task
             Stream<CompletableFuture<Void>> futures = replicas.stream()
-                    .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica)));
-
+                    .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica), Connection.executor));
             try {
                 if (timeOutMillis > 0) {
                     CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
+
+                    log("waitCommand [have slaves] wait response");
                 }
             } catch (Exception e) {
-                System.out.println("等待slave wait 响应超时:" + e.getMessage());
+                log("waitCommand 等待slave wait 响应超时:" + e.getMessage());
             }
         }
         // Get count of acknowledged replicas and reset counter
         int ackCount = acknowledgedReplicaCount.intValue();
         acknowledgedReplicaCount.set(0);
+        log("waitCommand [set counter] " + ackCount);
         return String.format(":%d\r\n", ackCount);
     }
+
     private void getAcknowledgement(Socket socket) {
         try {
             int sendCount = sendReplicaCount.incrementAndGet();
@@ -270,10 +285,10 @@ public class CommandHandle extends Thread {
 
             String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
             outputStream.write(ackCommand.getBytes());
-            log(sendCount+" Ack command sent:【",ackCommand,"】");
+            log(sendCount + " Ack command sent:【", ackCommand, "】");
 
             String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
-            log(sendCount+" Ack esponse received:【",ackResponse,"】");
+            log(sendCount + " Ack esponse received:【", ackResponse, "】");
             acknowledgedReplicaCount.incrementAndGet();
 
         } catch (IOException e) {
@@ -309,7 +324,7 @@ public class CommandHandle extends Thread {
         //                .get(timeOutMillis, TimeUnit.MILLISECONDS)
 //        try {
 //
-            CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
+        CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
 //        } catch (TimeoutException e) {
 //            System.out.println("time out:" + e.getMessage());
 //        }
