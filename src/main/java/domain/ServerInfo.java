@@ -29,7 +29,17 @@ public class ServerInfo {
     private Long masterReplOffset = 0L;
     private Long slaveOffset = 0L;
     private volatile Set<SlaveSocket> replicas = new HashSet<>();
-//    private volatile Set<SlaveSocket> slaveSockets = new HashSet<>();
+
+    private boolean hasWrite;
+
+    public boolean isHasWrite() {
+        return hasWrite;
+    }
+
+    public void setHasWrite(boolean hasWrite) {
+        this.hasWrite = hasWrite;
+    }
+    //    private volatile Set<SlaveSocket> slaveSockets = new HashSet<>();
 
 //    public Set<SlaveSocket> getSlaveSockets() {
 //        return slaveSockets;

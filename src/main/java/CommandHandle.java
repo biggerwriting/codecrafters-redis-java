@@ -263,6 +263,7 @@ public class CommandHandle extends Thread {
         }
         log("【socketId=" + socketId + "】", "setDict finished, 目前的 dict 数量 size = " + setDict.size());
         response = "+OK\r\n";
+        serverInfo.setHasWrite(true);
         return response;
     }
 
@@ -273,9 +274,9 @@ public class CommandHandle extends Thread {
         }
         int ackCount = serverInfo.getReplicas().size();
         acknowledgedReplicaCount.set(0);
+        log("现有set中 slave 数量是"+ackCount);
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
-                && !serverInfo.getReplicas().isEmpty()) {
-            log("现有set中 slave 数量是"+ackCount);
+                && !serverInfo.getReplicas().isEmpty() && serverInfo.isHasWrite()) {
             long timeOutMillis = Long.parseLong(tokens.get(2));
             log("【socketId=" + socketId + "】", "waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
@@ -294,10 +295,10 @@ public class CommandHandle extends Thread {
                 log("【socketId=" + socketId + "】", "waitCommand 等待slave wait 响应异常:" + e);
                 e.printStackTrace();
             }
+            // Get count of acknowledged replicas and reset counter
+            ackCount = acknowledgedReplicaCount.intValue();
+            acknowledgedReplicaCount.set(0);
         }
-        // Get count of acknowledged replicas and reset counter
-        ackCount = acknowledgedReplicaCount.intValue();
-        acknowledgedReplicaCount.set(0);
         log("【socketId=" + socketId + "】", "waitCommand [set counter] " + ackCount);
         return String.format(":%d\r\n", ackCount);
     }
