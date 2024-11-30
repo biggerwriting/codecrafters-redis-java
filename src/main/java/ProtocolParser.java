@@ -23,7 +23,8 @@ public class ProtocolParser {
      * @param serverInfo  记录从master 传过来多少命令
      * @return
      */
-    public static Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
+    public static  Object parseInput(DataInputStream inputStream, ServerInfo serverInfo) {
+        log("[parseInput] is called");
         try {
             char b = (char) inputStream.readByte();
             log("parseInput first byte:" + b);
@@ -113,7 +114,7 @@ public class ProtocolParser {
         }
 
         byte b = inputStream.readByte();// skip '\n' after '\r'
-        log("parseDigits 【" + digits, "】, end with ", Integer.toHexString(b));
+        log("parseDigits [" + digits, "], end with ", Integer.toHexString(b));
         return Integer.parseInt(digits.toString());
     }
 

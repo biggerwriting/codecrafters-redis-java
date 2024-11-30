@@ -62,6 +62,7 @@ public class CommandHandle extends Thread {
             log("【socketId=" + socketId+"】",socketId+ "- read begin " + System.currentTimeMillis());
             Object readMsg;
             String response = null;
+            log("[parseInput] call - handle");
             while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
                 log("【socketId=" + socketId+"】","得到客户端请求【", readMsg.toString(), "】");
                 if (readMsg instanceof String) {
@@ -84,6 +85,7 @@ public class CommandHandle extends Thread {
                         sendEmpteyRDBFile(outputStream);
                     }
                 }
+                log("[parseInput] call - handle");
             }
             log("【socketId=" + socketId+"】","read end " + System.currentTimeMillis());
         } catch (IOException e) {
@@ -281,17 +283,21 @@ public class CommandHandle extends Thread {
 
     private void getAcknowledgement(Socket socket) {
         try {
-            int sendCount = sendReplicaCount.incrementAndGet();
-            DataInputStream inputStream = new DataInputStream(socket.getInputStream());
-            OutputStream outputStream = socket.getOutputStream();
+            synchronized (socket){
 
-            String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
-            outputStream.write(ackCommand.getBytes());
-            log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack command sent:【", ackCommand, "】");
+                int sendCount = sendReplicaCount.incrementAndGet();
+                DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+                OutputStream outputStream = socket.getOutputStream();
+                String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
+                outputStream.write(ackCommand.getBytes());
+                log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack command sent:【", ackCommand, "】");
 
-            String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
-            log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack esponse received:【", ackResponse, "】");
-            acknowledgedReplicaCount.incrementAndGet();
+                log("[parseInput] call - getAcknowledgement");
+                String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
+                log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack esponse received:【", ackResponse, "】");
+                acknowledgedReplicaCount.incrementAndGet();
+            }
+
 
         } catch (IOException e) {
             System.out.printf("Acknowledgement failed: %s\n", e.getMessage());
