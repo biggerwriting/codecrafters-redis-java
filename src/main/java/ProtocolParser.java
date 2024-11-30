@@ -60,7 +60,7 @@ public class ProtocolParser {
             }
         } catch (IOException e) {
             System.out.println("读取输入error: " + e.getMessage());
-            e.printStackTrace();
+            // e.printStackTrace();
         }
         log("ERROR: parseInput 读取失败");
         return null;
