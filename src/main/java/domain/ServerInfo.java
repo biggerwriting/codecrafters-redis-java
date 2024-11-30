@@ -28,16 +28,16 @@ public class ServerInfo {
     private String masterReplid;
     private Long masterReplOffset = 0L;
     private Long slaveOffset = 0L;
-    private volatile Set<Socket> replicas = new HashSet<>();
-    private volatile Set<SlaveSocket> slaveSockets = new HashSet<>();
+    private volatile Set<SlaveSocket> replicas = new HashSet<>();
+//    private volatile Set<SlaveSocket> slaveSockets = new HashSet<>();
 
-    public Set<SlaveSocket> getSlaveSockets() {
-        return slaveSockets;
-    }
-
-    public void setSlaveSockets(Set<SlaveSocket> slaveSockets) {
-        this.slaveSockets = slaveSockets;
-    }
+//    public Set<SlaveSocket> getSlaveSockets() {
+//        return slaveSockets;
+//    }
+//
+//    public void setSlaveSockets(Set<SlaveSocket> slaveSockets) {
+//        this.slaveSockets = slaveSockets;
+//    }
 
     public void addOffset(long offset) {
         this.slaveOffset += offset;
@@ -115,11 +115,11 @@ public class ServerInfo {
         this.masterReplOffset = masterReplOffset;
     }
 
-    public Set<Socket> getReplicas() {
+    public Set<SlaveSocket> getReplicas() {
         return replicas;
     }
 
-    public void setReplicas(Set<Socket> replicas) {
+    public void setReplicas(Set<SlaveSocket> replicas) {
         this.replicas = replicas;
     }
 }

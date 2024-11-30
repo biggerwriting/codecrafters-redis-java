@@ -62,13 +62,14 @@ public class Slave {
                     //The master will then send REPLCONF GETACK * to your replica. It'll expect to receive REPLCONF ACK 0 as a reply.
                     if (response != null && response.contains("REPLCONF")) {
                         outputStream.write(response.getBytes(StandardCharsets.UTF_8));
+                        log("返回给master【" ,response,"】");
                     }
                 } else {
                     log(serverInfo, "服务端还有话说 不知说了啥【", readMsg.toString(), "】");
                 }
             }
             log( "ERROR 向服务器建立连接完毕, 服务器异常断开连接");
-            exit(1);
+//            exit(1);
         } catch (Exception e) {
             log( "从服务器异常 Exception: " + e.getMessage());
             e.printStackTrace();

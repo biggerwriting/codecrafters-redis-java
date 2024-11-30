@@ -83,14 +83,14 @@ public class CommandHandle extends Thread {
                     // 建立从连接
                     if (response.startsWith("+FULLRESYNC")) {
                         log("【socketId=" + socketId + "】", "建立了主从连接，向从服务器发送空的RDB文件");
-                        serverInfo.getReplicas().add(socket);
 
                         sendEmpteyRDBFile(outputStream);
                         SlaveSocket slaveSocket = new SlaveSocket(socket, socketId);
                         slaveSocket.setOutputStream(outputStream);
                         slaveSocket.setInputStream(inputStream);
 
-                        serverInfo.getSlaveSockets().add(slaveSocket);
+                        serverInfo.getReplicas().add(slaveSocket);
+                        break;
 //                        flag = false;
                     }
                 }
@@ -235,7 +235,8 @@ public class CommandHandle extends Thread {
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
             log("【socketId=" + socketId + "】", "Sending data to replicas -> " + tokens);
-            Set<Socket> replicas = serverInfo.getReplicas();
+            Set<SlaveSocket> replicas = serverInfo.getReplicas();
+            Set<SlaveSocket> remove = new HashSet<>();
             replicas.forEach(socket -> {
                 try {
                     OutputStream replicaOutputStream = socket.getOutputStream();
@@ -243,15 +244,15 @@ public class CommandHandle extends Thread {
                     log("【socketId=" + socketId + "】", "data sent to replicas");
                 } catch (SocketException e) {
                     log("【socketId=" + socketId + "】", "Error sending data to replica: " + e.getMessage());
-                    replicas.remove(socket);
-                    log("【socketId=" + socketId + "】", "目前的slave服务数量：" + replicas.size());
+                    remove.add(socket);
                 } catch (Exception e) {
                     log("【socketId=" + socketId + "】", "Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
-                    replicas.remove(socket);
-                    log("【socketId=" + socketId + "】", "目前的slave服务数量：" + replicas.size());
+                    remove.add(socket);
                 }
             });
+            replicas.removeAll(remove);
+            log("【socketId=" + socketId + "】", "目前的slave服务数量：" + replicas.size());
         }
         log("【socketId=" + socketId + "】", "setDict finished, 目前的 dict 数量 size = " + setDict.size());
         response = "+OK\r\n";
@@ -268,7 +269,7 @@ public class CommandHandle extends Thread {
             long timeOutMillis = Long.parseLong(tokens.get(2));
             log("【socketId=" + socketId + "】", "waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
-            Set<SlaveSocket> replicas = serverInfo.getSlaveSockets();
+            Set<SlaveSocket> replicas = serverInfo.getReplicas();
             // Map each replica to a CompletableFuture representing async task
             Stream<CompletableFuture<Void>> futures = replicas.stream()
                     .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica), Connection.executor));
@@ -291,13 +292,13 @@ public class CommandHandle extends Thread {
     }
 
     private void getAcknowledgement(SlaveSocket slaveSocket ) {
-        try (OutputStream outputStream = slaveSocket.getOutputStream();
-             DataInputStream inputStream = slaveSocket.getInputStream()
-        ) {
+        try {OutputStream outputStream = slaveSocket.getOutputStream();
+            DataInputStream inputStream = slaveSocket.getInputStream();
             int sendCount = sendReplicaCount.incrementAndGet();
 //            synchronized (socket.getInputStream()){
             String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
             outputStream.write(ackCommand.getBytes());
+            outputStream.flush();
             log("【socketId=" + socketId + "】【sendCount=", sendCount + "】 Ack command sent:【", ackCommand, "】");
 
             log("[parseInput] call - getAcknowledgement");
