@@ -150,13 +150,13 @@ public class CommandHandle extends Thread {
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
                 if ("GETACK".equalsIgnoreCase(message)) {
-                    try {
-                        int s = new Random().nextInt(500);
-                        Thread.sleep(s);
-                        log("====== sleep "+s);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
+//                    try {
+//                        int s = new Random().nextInt(500);
+//                        Thread.sleep(s);
+//                        log("====== sleep "+s);
+//                    } catch (InterruptedException e) {
+//                        throw new RuntimeException(e);
+//                    }
                     response = ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getSlaveOffset() - 37));
                 }
 
