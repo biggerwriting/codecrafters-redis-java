@@ -150,13 +150,20 @@ public class CommandHandle extends Thread {
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
                 if ("GETACK".equalsIgnoreCase(message)) {
+                    try {
+                        int s = new Random().nextInt(500);
+                        Thread.sleep(s);
+                        log("====== sleep "+s);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                     response = ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getSlaveOffset() - 37));
                 }
 
                 // [REPLCONF, ACK, 31] -- 收到从服务器的ack 响应，但是为什么是在这？
-                if (tokens.size() == 3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
-                    acknowledgedReplicaCount.incrementAndGet();
-                }
+//                if (tokens.size() == 3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
+//                    acknowledgedReplicaCount.incrementAndGet();
+//                }
 
                 break;
             }
@@ -265,8 +272,10 @@ public class CommandHandle extends Thread {
             log("【socketId=" + socketId + "】", "waitCommand timeOutMillis = " + timeOutMillis);
         }
         int ackCount = serverInfo.getReplicas().size();
+        acknowledgedReplicaCount.set(0);
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
+            log("现有set中 slave 数量是"+ackCount);
             long timeOutMillis = Long.parseLong(tokens.get(2));
             log("【socketId=" + socketId + "】", "waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
@@ -306,6 +315,7 @@ public class CommandHandle extends Thread {
             log("[parseInput] call - getAcknowledgement");
             String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
             log("【socketId=" + socketId + "】【sendCount=", sendCount + "】 Ack esponse received:【", ackResponse, "】");
+            log("wait 成功等到返回+1，历史有"+acknowledgedReplicaCount.get());
             acknowledgedReplicaCount.incrementAndGet();
 //            }
 
@@ -319,7 +329,7 @@ public class CommandHandle extends Thread {
     public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
         AtomicInteger acknowledgedReplicaCount = new AtomicInteger();
         long timeOutMillis = 500L;
-        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+        List<Integer> list = Arrays.asList(6,5,1, 2, 3, 4);
         CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
             try {
                 int num = 1000;
