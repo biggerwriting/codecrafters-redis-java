@@ -56,6 +56,7 @@ public class ProtocolParser {
                 default: {
                     log("parseInput first byte:" + Integer.toHexString(b) + "--unexcepted ");
                     log("遇到了异常的输入，把剩下的都打印出来：【", readBuffLine(inputStream), "】");
+                    parseInput(inputStream,serverInfo);
                 }
             }
         } catch (IOException e) {

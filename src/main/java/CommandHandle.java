@@ -368,6 +368,8 @@ public class CommandHandle extends Thread {
                 acknowledgedReplicaCount.incrementAndGet();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            } finally {
+                log(index+"如何超时时退出呢"+System.currentTimeMillis());
             }
         }));
 
