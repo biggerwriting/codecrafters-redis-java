@@ -59,44 +59,45 @@ public class CommandHandle extends Thread {
         try (OutputStream outputStream = socket.getOutputStream();
              DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
-            log(socketId+ "- read begin " + System.currentTimeMillis());
+            log("【socketId=" + socketId+"】",socketId+ "- read begin " + System.currentTimeMillis());
             Object readMsg;
             String response = null;
             while (null != (readMsg = ProtocolParser.parseInput(inputStream, serverInfo))) {
-                log(socketId+ "- 得到客户端请求【", readMsg.toString(), "】");
+                log("【socketId=" + socketId+"】","得到客户端请求【", readMsg.toString(), "】");
                 if (readMsg instanceof String) {
                     response = processCommand(Collections.singletonList((String) readMsg));
                 } else if (readMsg instanceof List) {
                     List<String> array = (List<String>) readMsg;
                     response = processCommand(array);
                 } else {
-                    log(socketId+ "- 不知说了啥【", readMsg.toString(), "】");
+                    log("【socketId=" + socketId+"】", " 不知说了啥【", readMsg.toString(), "】");
                 }
-                log(socketId+ "- 返回响应【", response, "】");
+                log("【socketId=" + socketId+"】", " 返回响应【", response, "】");
 
                 if (response != null) {
                     outputStream.write(response.getBytes(StandardCharsets.UTF_8));
                     // 建立从连接
                     if (response.startsWith("+FULLRESYNC")) {
-                        log("建立了主从连接，向从服务器发送空的RDB文件");
+                        log("【socketId=" + socketId+"】","建立了主从连接，向从服务器发送空的RDB文件");
                         serverInfo.getReplicas().add(socket);
 
                         sendEmpteyRDBFile(outputStream);
                     }
                 }
             }
-            log("read end " + System.currentTimeMillis());
+            log("【socketId=" + socketId+"】","read end " + System.currentTimeMillis());
         } catch (IOException e) {
-            log("IOException: " + e.getMessage());
+            log("【socketId=" + socketId+"】","IOException: " + e.getMessage());
             e.printStackTrace();
         }
 
     }
 
+
     public String processCommand(List<String> tokens) throws IOException {
 
         String response = null;
-        log("命令参数：" + tokens);
+        log("【socketId=" + socketId+"】","命令参数：" + tokens);
         // String command = tokens.get(0).toUpperCase();
 
         switch (tokens.get(0).toUpperCase()) {
@@ -163,7 +164,7 @@ public class CommandHandle extends Thread {
             }
         }
 
-        log(serverInfo, "response = ", response);
+        log("【socketId=" + socketId+"】", "response = ", response);
         return response;
     }
 
@@ -222,26 +223,26 @@ public class CommandHandle extends Thread {
 
         if (serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
-            log("Sending data to replicas -> " + tokens);
+            log("【socketId=" + socketId+"】","Sending data to replicas -> " + tokens);
             Set<Socket> replicas = serverInfo.getReplicas();
             replicas.forEach(socket -> {
                 try {
                     OutputStream replicaOutputStream = socket.getOutputStream();
                     replicaOutputStream.write(ProtocolParser.buildArray(tokens).getBytes(StandardCharsets.UTF_8));
-                    log("data sent to replicas");
+                    log("【socketId=" + socketId+"】","data sent to replicas");
                 } catch (SocketException e) {
-                    log("Error sending data to replica: " + e.getMessage());
+                    log("【socketId=" + socketId+"】","Error sending data to replica: " + e.getMessage());
                     replicas.remove(socket);
-                    log("目前的slave服务数量：" + replicas.size());
+                    log("【socketId=" + socketId+"】","目前的slave服务数量：" + replicas.size());
                 } catch (Exception e) {
-                    log("Error sending data to replica: " + e.getMessage());
+                    log("【socketId=" + socketId+"】","Error sending data to replica: " + e.getMessage());
                     e.printStackTrace();
                     replicas.remove(socket);
-                    log("目前的slave服务数量：" + replicas.size());
+                    log("【socketId=" + socketId+"】","目前的slave服务数量：" + replicas.size());
                 }
             });
         }
-        log("setDict finished, 目前的 dict 数量 size = " + setDict.size());
+        log("【socketId=" + socketId+"】","setDict finished, 目前的 dict 数量 size = " + setDict.size());
         response = "+OK\r\n";
         return response;
     }
@@ -249,12 +250,12 @@ public class CommandHandle extends Thread {
     private String waitCommand(List<String> tokens) {
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")) {
             long timeOutMillis = Long.parseLong(tokens.get(2));
-            log("waitCommand timeOutMillis = " + timeOutMillis);
+            log("【socketId=" + socketId+"】","waitCommand timeOutMillis = " + timeOutMillis);
         }
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
             long timeOutMillis = Long.parseLong(tokens.get(2));
-            log("waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
+            log("【socketId=" + socketId+"】","waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
             Set<Socket> replicas = serverInfo.getReplicas();
             // Map each replica to a CompletableFuture representing async task
@@ -264,16 +265,17 @@ public class CommandHandle extends Thread {
                 if (timeOutMillis > 0) {
                     CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
 
-                    log("waitCommand [have slaves] wait response");
+                    log("【socketId=" + socketId+"】","waitCommand [have slaves] wait response");
                 }
             } catch (Exception e) {
-                log("waitCommand 等待slave wait 响应超时:" + e.getMessage());
+                log("【socketId=" + socketId+"】","waitCommand 等待slave wait 响应异常:" + e.getMessage());
+                e.printStackTrace();
             }
         }
         // Get count of acknowledged replicas and reset counter
         int ackCount = acknowledgedReplicaCount.intValue();
         acknowledgedReplicaCount.set(0);
-        log("waitCommand [set counter] " + ackCount);
+        log("【socketId=" + socketId+"】","waitCommand [set counter] " + ackCount);
         return String.format(":%d\r\n", ackCount);
     }
 
@@ -285,10 +287,10 @@ public class CommandHandle extends Thread {
 
             String ackCommand = ProtocolParser.buildRespArray("REPLCONF", "GETACK", "*");
             outputStream.write(ackCommand.getBytes());
-            log(sendCount + " Ack command sent:【", ackCommand, "】");
+            log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack command sent:【", ackCommand, "】");
 
             String ackResponse = ProtocolParser.parseInput(inputStream, null).toString();
-            log(sendCount + " Ack esponse received:【", ackResponse, "】");
+            log("【socketId=" + socketId+"】【sendCount=",sendCount + "】 Ack esponse received:【", ackResponse, "】");
             acknowledgedReplicaCount.incrementAndGet();
 
         } catch (IOException e) {

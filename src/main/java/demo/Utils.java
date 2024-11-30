@@ -3,6 +3,7 @@ package demo;
 import domain.ServerInfo;
 
 import java.io.DataInputStream;
+import java.util.Arrays;
 
 /**
  * @Author: tongqianwen
@@ -28,6 +29,12 @@ public class Utils {
 
     //    public static void main(String[] args) {
 //        log(new ServerInfo(), "hh","w\r\neee");
+//    }
+
+//    public static void  log(Integer socketId, String... msg) {
+//        String socket = "【socketId=" + socketId+"】";
+//        String[] list = Arrays.asList(socket, socket);
+//        log(ServerInfo.getInstance(),  , msg);
 //    }
     public static void log(String... msg) {
         log(ServerInfo.getInstance(),  msg);
