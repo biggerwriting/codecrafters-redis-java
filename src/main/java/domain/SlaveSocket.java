@@ -1,5 +1,7 @@
 package domain;
 
+import java.io.DataInputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 
 /**
@@ -9,12 +11,29 @@ import java.net.Socket;
 public class SlaveSocket {
     private Socket socket;
     private Integer id;
-
+    OutputStream outputStream;
+    DataInputStream inputStream;
     private Boolean readFlag = true;
 
     public SlaveSocket(Socket socket, Integer id) {
         this.socket = socket;
         this.id = id;
+    }
+
+    public OutputStream getOutputStream() {
+        return outputStream;
+    }
+
+    public void setOutputStream(OutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
+
+    public DataInputStream getInputStream() {
+        return inputStream;
+    }
+
+    public void setInputStream(DataInputStream inputStream) {
+        this.inputStream = inputStream;
     }
 
     public Socket getSocket() {

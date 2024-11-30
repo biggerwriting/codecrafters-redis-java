@@ -86,7 +86,11 @@ public class CommandHandle extends Thread {
                         serverInfo.getReplicas().add(socket);
 
                         sendEmpteyRDBFile(outputStream);
-//                        serverInfo.getSlaveSockets().add(new SlaveSocket(socket, socketId));
+                        SlaveSocket slaveSocket = new SlaveSocket(socket, socketId);
+                        slaveSocket.setOutputStream(outputStream);
+                        slaveSocket.setInputStream(inputStream);
+
+                        serverInfo.getSlaveSockets().add(slaveSocket);
 //                        flag = false;
                     }
                 }
@@ -264,7 +268,7 @@ public class CommandHandle extends Thread {
             long timeOutMillis = Long.parseLong(tokens.get(2));
             log("【socketId=" + socketId + "】", "waitCommand [have slaves] timeOutMillis = " + timeOutMillis);
 
-            Set<Socket> replicas = serverInfo.getReplicas();
+            Set<SlaveSocket> replicas = serverInfo.getSlaveSockets();
             // Map each replica to a CompletableFuture representing async task
             Stream<CompletableFuture<Void>> futures = replicas.stream()
                     .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica), Connection.executor));
@@ -286,10 +290,9 @@ public class CommandHandle extends Thread {
         return String.format(":%d\r\n", ackCount);
     }
 
-    private void getAcknowledgement(Socket socket) {
-        try (OutputStream outputStream = socket.getOutputStream();
-             InputStream socketInputStream = new DataInputStream(socket.getInputStream());
-             DataInputStream inputStream = new DataInputStream(socketInputStream)
+    private void getAcknowledgement(SlaveSocket slaveSocket ) {
+        try (OutputStream outputStream = slaveSocket.getOutputStream();
+             DataInputStream inputStream = slaveSocket.getInputStream()
         ) {
             int sendCount = sendReplicaCount.incrementAndGet();
 //            synchronized (socket.getInputStream()){
