@@ -279,14 +279,15 @@ public class CommandHandle extends Thread {
                     CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
 
                     log("【socketId=" + socketId + "】", "waitCommand [have slaves] wait response");
-                    // Get count of acknowledged replicas and reset counter
-                    ackCount = acknowledgedReplicaCount.intValue();
+
                 }
             } catch (Exception e) {
                 log("【socketId=" + socketId + "】", "waitCommand 等待slave wait 响应异常:" + e);
                 e.printStackTrace();
             }
         }
+        // Get count of acknowledged replicas and reset counter
+        ackCount = acknowledgedReplicaCount.intValue();
         acknowledgedReplicaCount.set(0);
         log("【socketId=" + socketId + "】", "waitCommand [set counter] " + ackCount);
         return String.format(":%d\r\n", ackCount);
@@ -316,6 +317,7 @@ public class CommandHandle extends Thread {
 
 
     public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
+        AtomicInteger acknowledgedReplicaCount = new AtomicInteger();
         long timeOutMillis = 500L;
         List<Integer> list = Arrays.asList(1, 2, 3, 4);
         CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
@@ -342,7 +344,7 @@ public class CommandHandle extends Thread {
         //                .get(timeOutMillis, TimeUnit.MILLISECONDS)
 //        try {
 //
-        CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
+        //CompletableFuture.allOf(voidCompletableFuture, voidCompletableFuture1).get(timeOutMillis, TimeUnit.MILLISECONDS);
 //        } catch (TimeoutException e) {
 //            System.out.println("time out:" + e.getMessage());
 //        }
@@ -352,6 +354,7 @@ public class CommandHandle extends Thread {
                 System.out.println(Thread.currentThread().getName() + " B sleep start " + num);
                 Thread.sleep(num);
                 System.out.println(Thread.currentThread().getName() + " B sleep end   " + num);
+                acknowledgedReplicaCount.incrementAndGet();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -368,7 +371,8 @@ public class CommandHandle extends Thread {
         //completeOnTimeout(null,timeOutMillis, TimeUnit.MILLISECONDS)).collect(Collectors.toList());
 
 
-        System.out.println("main end");
+       int  ackCount = acknowledgedReplicaCount.intValue();
+        System.out.println("main end "+ackCount);
         Thread.sleep(4000);
     }
 
