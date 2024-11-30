@@ -264,6 +264,7 @@ public class CommandHandle extends Thread {
             long timeOutMillis = Long.parseLong(tokens.get(2));
             log("【socketId=" + socketId + "】", "waitCommand timeOutMillis = " + timeOutMillis);
         }
+        int ackCount = serverInfo.getReplicas().size();
         if (tokens.size() > 2 && serverInfo.getRole().equalsIgnoreCase("master")
                 && !serverInfo.getReplicas().isEmpty()) {
             long timeOutMillis = Long.parseLong(tokens.get(2));
@@ -272,20 +273,20 @@ public class CommandHandle extends Thread {
             Set<SlaveSocket> replicas = serverInfo.getReplicas();
             // Map each replica to a CompletableFuture representing async task
             Stream<CompletableFuture<Void>> futures = replicas.stream()
-                    .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica), Connection.executor));
+                    .map(replica -> CompletableFuture.runAsync(() -> getAcknowledgement(replica)));
             try {
                 if (timeOutMillis > 0) {
                     CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(timeOutMillis, TimeUnit.MILLISECONDS);
 
                     log("【socketId=" + socketId + "】", "waitCommand [have slaves] wait response");
+                    // Get count of acknowledged replicas and reset counter
+                    ackCount = acknowledgedReplicaCount.intValue();
                 }
             } catch (Exception e) {
-                log("【socketId=" + socketId + "】", "waitCommand 等待slave wait 响应异常:" + e.getMessage());
+                log("【socketId=" + socketId + "】", "waitCommand 等待slave wait 响应异常:" + e);
                 e.printStackTrace();
             }
         }
-        // Get count of acknowledged replicas and reset counter
-        int ackCount = acknowledgedReplicaCount.intValue();
         acknowledgedReplicaCount.set(0);
         log("【socketId=" + socketId + "】", "waitCommand [set counter] " + ackCount);
         return String.format(":%d\r\n", ackCount);

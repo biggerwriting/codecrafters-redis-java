@@ -41,6 +41,9 @@ Note: This section is for stages 2 and beyond.
 java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main
 - 从节点
 java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main  --port 6380 --replicaof "localhost 6379"
+
+java -classpath "C:\Projects\mytest\crafters\codecrafters-redis-java\target\classes" Main --replicaof "localhost 6379" --port 6384
+
 - 查看两个服务的状态
   .\redis-cli.exe -p 6380 info replication
   .\redis-cli.exe -p 6379 info replication
