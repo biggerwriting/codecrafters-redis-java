@@ -150,20 +150,8 @@ public class CommandHandle extends Thread {
                 String message = tokens.size() > 1 ? tokens.get(1) : "";
                 // receiving the REPLCONF GETACK * command and responding with REPLCONF ACK 0
                 if ("GETACK".equalsIgnoreCase(message)) {
-//                    try {
-//                        int s = new Random().nextInt(500);
-//                        Thread.sleep(s);
-//                        log("====== sleep "+s);
-//                    } catch (InterruptedException e) {
-//                        throw new RuntimeException(e);
-//                    }
                     response = ProtocolParser.buildRespArray("REPLCONF", "ACK", String.valueOf(serverInfo.getSlaveOffset() - 37));
                 }
-
-                // [REPLCONF, ACK, 31] -- 收到从服务器的ack 响应，但是为什么是在这？
-//                if (tokens.size() == 3 && "ACK".equalsIgnoreCase(tokens.get(1))) {
-//                    acknowledgedReplicaCount.incrementAndGet();
-//                }
 
                 break;
             }
@@ -174,6 +162,10 @@ public class CommandHandle extends Thread {
             }
             case "WAIT": {
                 response = waitCommand(tokens);
+                break;
+            }
+            case "INCR":{
+                response = incrCommand(tokens);
                 break;
             }
             default: {
@@ -390,6 +382,23 @@ public class CommandHandle extends Thread {
     }
 
 
+    private  String incrCommand(List<String> tokens) {
+        String response;
+        ExpiryValue expiryValue = setDict.get(tokens.get(1));
+        if (expiryValue != null  ) {
+            String message = expiryValue.value;
+            int number = Integer.parseInt(message);
+            number++;
+            tokens.add(String.valueOf(number));
+            setCommand(tokens);
+            response = ProtocolParser.buildSimpleString(message);
+        } else {
+            tokens.add("1");
+            setCommand(tokens);
+            response = "$1\r\n";
+        }
+        return response;
+    }
     private static String getCommand(List<String> tokens) {
         String response;
         ExpiryValue expiryValue = setDict.get(tokens.get(1));
